@@ -27,6 +27,9 @@
 #ifndef EVE_PY_REP_H
 #define EVE_PY_REP_H
 
+#include "../../eve-core/eve-core.h"
+#include "../../eve-core/memory/RefPtr.h"
+
 class PyInt;
 class PyLong;
 class PyFloat;
@@ -158,6 +161,25 @@ public:
 
     using RefObject::IncRef;
     using RefObject::DecRef;
+    //using RefObject::GetCount();
+    //using RefObject::IsDeleted();
+
+    PyRep(PyType t);
+    // copy c'tor
+    PyRep(const PyRep& oth );
+    // move c'tor
+    PyRep(PyRep&& oth) =delete;
+    /*   : PyRep(oth.mType) {
+     *        sLog.Cyan("PyRep()", "Calling Move C'tor.");
+     *        std::swap(*this, oth);
+     *        PyDecRef(&oth);
+     * }
+     */
+    // copy assignment
+    PyRep& operator= (const PyRep& oth) = default;
+    // move assignment
+    PyRep& operator= (PyRep&& oth) = default;
+
 
     /**
      * @brief Dumps object to file.
@@ -177,9 +199,9 @@ public:
     /**
      * @brief Clones object.
      *
-     * @return Indentical copy of object.
+     * @return Identical copy of object.
      */
-    virtual PyRep* Clone() const = 0;
+    virtual PyRep* Clone() const;
     /**
      * @brief Visits object.
      *
@@ -188,7 +210,7 @@ public:
      * @retval true  Visit successful.
      * @retval false Error during visit.
      */
-    virtual bool visit( PyVisitor& v ) const = 0;
+    virtual bool visit( PyVisitor& v ) const;
     /**
      * @brief virtual function to generate a hash value of a object.
      *
@@ -208,18 +230,7 @@ public:
     static uint32 IntegerValueU32(PyRep* pRep);
 
 protected:
-    PyRep( PyType t );
-    // copy c'tor
-    PyRep( const PyRep& oth );
-    // move c'tor
-    PyRep(PyRep&& oth) = delete;
-    // copy assignment
-    PyRep& operator= (const PyRep& oth) = default;
-    // move assignment
-    PyRep& operator= (PyRep&& oth) = default;
-
-    virtual ~PyRep()    { /* do we need to do anything here? */ }
-
+    virtual ~PyRep();
     const PyType mType;
 };
 
@@ -231,6 +242,7 @@ protected:
 class PyInt : public PyRep
 {
 public:
+    // default c'tor
     PyInt( const int32 i );
     // copy c'tor
     PyInt( const PyInt& oth );
@@ -248,8 +260,8 @@ public:
 
     int32 hash() const;
 
-protected:
     virtual ~PyInt()    { /* do we need to do anything here? */ }
+protected:
     const int32 mValue;
 };
 
@@ -261,6 +273,7 @@ protected:
 class PyLong : public PyRep
 {
 public:
+    // default c'tor
     PyLong( const int64 i );
     // copy c'tor
     PyLong( const PyLong& oth );
@@ -279,8 +292,8 @@ public:
 
     int32 hash() const;
 
-protected:
     virtual ~PyLong()    { /* do we need to do anything here? */ }
+protected:
     const int64 mValue;
 };
 
@@ -292,6 +305,7 @@ protected:
 class PyFloat : public PyRep
 {
 public:
+    // default c'tor
     PyFloat( const double& i );
     // copy c'tor
     PyFloat( const PyFloat& oth );
@@ -310,8 +324,8 @@ public:
 
     int32 hash() const;
 
-protected:
     virtual ~PyFloat()    { /* do we need to do anything here? */ }
+protected:
     const double mValue;
 };
 
@@ -323,6 +337,7 @@ protected:
 class PyBool : public PyRep
 {
 public:
+    // default c'tor
     PyBool( bool i );
     // copy c'tor
     PyBool( const PyBool& oth );
@@ -339,8 +354,8 @@ public:
 
     bool value() const { return mValue; }
 
-protected:
     virtual ~PyBool()    { /* do we need to do anything here? */ }
+protected:
     const bool mValue;
 };
 
@@ -352,6 +367,7 @@ protected:
 class PyNone : public PyRep
 {
 public:
+    // default c'tor
     PyNone();
     // copy c'tor
     PyNone( const PyNone& oth );
@@ -368,7 +384,6 @@ public:
 
     int32 hash() const;
 
-protected:
     virtual ~PyNone()    { /* do we need to do anything here? */ }
 };
 
@@ -461,7 +476,7 @@ public:
     int32 hash() const;
 
 protected:
-    virtual ~PyString();
+    virtual ~PyString()                                 { /* do nothing here */ }
     const std::string mValue;
     mutable int32 mHashCache;
 };
@@ -554,8 +569,8 @@ public:
      */
     const std::string& content() const { return mValue; }
 
-protected:
     virtual ~PyToken()    { /* do we need to do anything here? */ }
+protected:
     const std::string mValue;
 };
 
@@ -567,11 +582,11 @@ protected:
 class PyTuple : public PyRep
 {
 public:
-    typedef std::vector<PyRep*>             storage_type;
-    typedef storage_type::iterator          iterator;
-    typedef storage_type::const_iterator    const_iterator;
+    typedef std::vector<PyRep*>::iterator          iterator;
+    typedef std::vector<PyRep*>::const_iterator    const_iterator;
 
-    PyTuple( size_t item_count );
+    // default c'tor
+    PyTuple( size_t item_count= 0 );
     // copy c'tor
     PyTuple( const PyTuple& oth );
     // move c'tor
@@ -581,15 +596,14 @@ public:
     // move assignment
     PyTuple& operator= (PyTuple&& oth) = delete;
 
-
     PyRep* Clone() const;
     bool visit( PyVisitor& v ) const;
 
-    const_iterator begin() const { return items.begin(); }
-    const_iterator end() const { return items.end(); }
+    const_iterator begin() const                        { return items.begin(); }
+    const_iterator end() const                          { return items.end(); }
 
-    size_t size() const { return items.size(); }
-    bool empty() const { return items.empty(); }
+    size_t size() const                                 { return items.size(); }
+    bool empty() const                                  { return items.empty(); }
     void clear();
 
     /**
@@ -599,7 +613,7 @@ public:
      *
      * @return Python object.
      */
-    PyRep* GetItem( size_t index ) const { return items.at( index ); }
+    PyRep* GetItem( size_t index ) const                { return items.at( index ); }
 
     /**
      * @brief Stores Python object.
@@ -610,25 +624,25 @@ public:
     void SetItem( size_t index, PyRep* object )
     {
         PyRep** rep = &items.at( index );
-
         PySafeDecRef( *rep );
-        if (object == nullptr)
+        if (object == nullptr) {
             *rep = new PyNone();
-        else
+        } else {
             *rep = object;
+        }
         PyIncRef( *rep );
     }
 
-    void SetItemInt( size_t index, int32 val ) { SetItem( index, new PyInt( val ) ); }
+    void SetItemInt( size_t index, int32 val )          { SetItem( index, new PyInt( val ) ); }
     void SetItemString( size_t index, const char* str ) { SetItem( index, new PyString( str ) ); }
 
     int32 hash() const;
 
     // This needs to be public for now.
-    storage_type items;
+    std::vector<PyRep*> items;
 
 protected:
-    virtual ~PyTuple();
+    virtual ~PyTuple()                                  { /* do nothing here */ }
 };
 
 /**
@@ -639,10 +653,10 @@ protected:
 class PyList : public PyRep
 {
 public:
-    typedef std::vector<PyRep*>             storage_type;
-    typedef storage_type::iterator          iterator;
-    typedef storage_type::const_iterator    const_iterator;
+    typedef std::vector<PyRep*>::iterator          iterator;
+    typedef std::vector<PyRep*>::const_iterator    const_iterator;
 
+    // default c'tor
     PyList( size_t item_count = 0 );
     // copy c'tor
     PyList( const PyList& oth );
@@ -657,11 +671,11 @@ public:
     PyRep* Clone() const;
     bool visit( PyVisitor& v ) const;
 
-    const_iterator begin() const { return items.begin(); }
-    const_iterator end() const { return items.end(); }
+    const_iterator begin() const                        { return items.begin(); }
+    const_iterator end() const                          { return items.end(); }
 
-    size_t size() const { return items.size(); }
-    bool empty() const { return items.empty(); }
+    size_t size() const                                 { return items.size(); }
+    bool empty() const                                  { return items.empty(); }
     void clear();
 
     /**
@@ -671,7 +685,7 @@ public:
      *
      * @return Python object.
      */
-    PyRep* GetItem( size_t index ) const { return items.at( index ); }
+    PyRep* GetItem( size_t index ) const                { return items.at( index ); }
 
     /**
      * @brief Stores Python object.
@@ -682,12 +696,12 @@ public:
     void SetItem( size_t index, PyRep* object )
     {
         PyRep** rep = &items.at( index );
-
         PySafeDecRef( *rep );
-        if (object == nullptr)
+        if (object == nullptr) {
             *rep = new PyNone();
-        else
+        } else {
             *rep = object;
+        }
         PyIncRef( *rep );
     }
     /**
@@ -698,14 +712,14 @@ public:
      */
     void SetItemString( size_t index, const char* str ) { SetItem( index, new PyString( str ) ); }
 
-    void AddItem( PyRep* i ) { items.push_back( i ); }
-    void AddItemInt( int32 intval ) { AddItem( new PyInt( intval ) ); }
-    void AddItemLong( int64 intval ) { AddItem( new PyLong( intval ) ); }
-    void AddItemReal( double realval ) { AddItem( new PyFloat( realval ) ); }
-    void AddItemString( const char* str ) { AddItem( new PyString( str ) ); }
+    void AddItem( PyRep* i )                            { items.push_back( i ); }
+    void AddItemInt( int32 intval )                     { AddItem( new PyInt( intval ) ); }
+    void AddItemLong( int64 intval )                    { AddItem( new PyLong( intval ) ); }
+    void AddItemReal( double realval )                  { AddItem( new PyFloat( realval ) ); }
+    void AddItemString( const char* str )               { AddItem( new PyString( str ) ); }
 
     // This needs to be public:
-    storage_type items;
+    std::vector<PyRep*> items;
 
 protected:
     virtual ~PyList();
@@ -749,16 +763,16 @@ public:
     typedef storage_type::iterator                             iterator;
     typedef storage_type::const_iterator                       const_iterator;
 
+    // default c'tor
     PyDict();
     // copy c'tor
     PyDict( const PyDict& oth );
     // move c'tor
-    PyDict(PyDict&& oth) = delete;
+    PyDict(PyDict&& oth) =delete;
     // copy assignment
-    PyDict& operator= (const PyDict& oth);
+    PyDict& operator=(const PyDict& oth);
     // move assignment
-    PyDict& operator= (PyDict&& oth) = delete;
-
+    PyDict& operator=(PyDict&& oth) =delete;
 
     PyRep* Clone() const;
     bool visit( PyVisitor& v ) const;
@@ -861,14 +875,13 @@ protected:
 class PyObjectEx : public PyRep
 {
 public:
-    typedef PyList                          list_type;
-    typedef list_type::iterator             list_iterator;
-    typedef list_type::const_iterator       const_list_iterator;
+    typedef PyList::iterator             list_iterator;
+    typedef PyList::const_iterator       const_list_iterator;
 
-    typedef PyDict                          dict_type;
-    typedef dict_type::iterator             dict_iterator;
-    typedef dict_type::const_iterator       const_dict_iterator;
+    typedef PyDict::iterator             dict_iterator;
+    typedef PyDict::const_iterator       const_dict_iterator;
 
+    // default c'tor
     PyObjectEx( bool is_type_2, PyRep* header );
     // copy c'tor
     PyObjectEx( const PyObjectEx& oth );
@@ -886,11 +899,11 @@ public:
     PyRep* header() const                               { return mHeader; }
     bool isType2() const                                { return mIsType2; }
 
-    list_type& list()                                   { return *mList; }
-    const list_type& list() const                       { return *mList; }
+    PyList& list()                                   { return *mList; }
+    const PyList& list() const                       { return *mList; }
 
-    dict_type& dict()                                   { return *mDict; }
-    const dict_type& dict() const                       { return *mDict; }
+    PyDict& dict()                                   { return *mDict; }
+    const PyDict& dict() const                       { return *mDict; }
 
 
 protected:
@@ -899,8 +912,8 @@ protected:
     PyRep* const mHeader;
     const bool mIsType2;
 
-    list_type* const mList;
-    dict_type* const mDict;
+    PyList* const mList;
+    PyDict* const mDict;
 };
 
 /**
@@ -911,10 +924,10 @@ protected:
 class PyObjectEx_Type1 : public PyObjectEx
 {
 public:
-    PyObjectEx_Type1( PyToken* type, PyTuple* args, bool enclosed=false );
-    PyObjectEx_Type1( PyObjectEx_Type1* args1, PyTuple* args2, bool enclosed=false );
-    PyObjectEx_Type1( PyToken* type, PyTuple* args, PyDict* keywords, bool enclosed=false );
-    PyObjectEx_Type1( PyToken* type, PyTuple* args, PyList* keywords, bool enclosed=false );
+    PyObjectEx_Type1( PyToken* type, PyTuple* args, bool enclosed= false );
+    PyObjectEx_Type1( PyObjectEx_Type1* args1, PyTuple* args2, bool enclosed= false );
+    PyObjectEx_Type1( PyToken* type, PyTuple* args, PyDict* keywords, bool enclosed= false );
+    PyObjectEx_Type1( PyToken* type, PyTuple* args, PyList* keywords, bool enclosed= false );
 
     PyToken* GetType() const;
     PyTuple* GetArgs() const;
@@ -924,10 +937,10 @@ public:
 
 protected:
     virtual ~PyObjectEx_Type1()    { /* do we need to do anything here? */ }
-    static PyTuple* _CreateHeader( PyToken* type, PyTuple* args, bool enclosed=false );
-    static PyTuple* _CreateHeader( PyObjectEx_Type1* args1, PyTuple* args2, bool enclosed=false );
-    static PyTuple* _CreateHeader( PyToken* type, PyTuple* args, PyDict* keywords, bool enclosed=false );
-    static PyTuple* _CreateHeader( PyToken* type, PyTuple* args, PyList* keywords, bool enclosed=false );
+    static PyTuple* _CreateHeader( PyToken* type, PyTuple* args, bool enclosed= false );
+    static PyTuple* _CreateHeader( PyObjectEx_Type1* args1, PyTuple* args2, bool enclosed= false );
+    static PyTuple* _CreateHeader( PyToken* type, PyTuple* args, PyDict* keywords, bool enclosed= false );
+    static PyTuple* _CreateHeader( PyToken* type, PyTuple* args, PyList* keywords, bool enclosed= false );
 };
 
 /**
@@ -938,8 +951,8 @@ protected:
 class PyObjectEx_Type2 : public PyObjectEx
 {
 public:
-    PyObjectEx_Type2( PyTuple* args, PyDict* keywords, bool enclosed=false );
-    PyObjectEx_Type2( PyToken* args, PyDict* keywords, bool enclosed=false );
+    PyObjectEx_Type2( PyTuple* args, PyDict* keywords, bool enclosed= false );
+    PyObjectEx_Type2( PyToken* args, PyDict* keywords, bool enclosed= false );
 
     PyTuple* GetArgs() const;
     PyDict* GetKeywords() const;
@@ -948,8 +961,8 @@ public:
 
 protected:
     virtual ~PyObjectEx_Type2()    { /* do we need to do anything here? */ }
-    static PyTuple* _CreateHeader( PyTuple* args, PyDict* keywords, bool enclosed=false );
-    static PyTuple* _CreateHeader( PyToken* args, PyDict* keywords, bool enclosed=false );
+    static PyTuple* _CreateHeader( PyTuple* args, PyDict* keywords, bool enclosed= false );
+    static PyTuple* _CreateHeader( PyToken* args, PyDict* keywords, bool enclosed= false );
 };
 
 /**
@@ -961,10 +974,10 @@ protected:
 class PyPackedRow : public PyRep
 {
 public:
-    typedef PyList                          storage_type;
-    typedef storage_type::iterator          iterator;
-    typedef storage_type::const_iterator    const_iterator;
+    typedef PyList::iterator          iterator;
+    typedef PyList::const_iterator    const_iterator;
 
+    // default c'tor
     PyPackedRow( DBRowDescriptor* header );
     // copy c'tor
     PyPackedRow( const PyPackedRow& oth );
@@ -974,6 +987,7 @@ public:
     PyPackedRow& operator= (const PyPackedRow& oth);
     // move assignment
     PyPackedRow& operator= (PyPackedRow&& oth) = delete;
+
 
 
     PyRep* Clone() const;
@@ -998,21 +1012,22 @@ protected:
     virtual ~PyPackedRow();
 
     DBRowDescriptor* const mHeader;
-    storage_type* const mFields;
+    PyList* const mFields;
 };
 
 class PySubStruct : public PyRep
 {
 public:
+    // default c'tor
     PySubStruct( PyRep* t );
     // copy c'tor
     PySubStruct( const PySubStruct& oth );
     // move c'tor
-    PySubStruct(PySubStruct&& oth) = delete;
+    PySubStruct(PySubStruct&& oth) =delete;
     // copy assignment
-    PySubStruct& operator= (const PySubStruct& oth) = delete;
+    PySubStruct& operator=(const PySubStruct& oth) =delete;
     // move assignment
-    PySubStruct& operator= (PySubStruct&& oth) = delete;
+    PySubStruct& operator=(PySubStruct&& oth) =delete;
 
 
     PyRep* Clone() const;
@@ -1029,7 +1044,9 @@ protected:
 class PySubStream : public PyRep
 {
 public:
+    // default c'tor
     PySubStream( PyRep* rep );
+    // default c'tor
     PySubStream( PyBuffer* buffer );
     // copy c'tor
     PySubStream( const PySubStream& oth );
@@ -1064,6 +1081,7 @@ protected:
 class PyChecksumedStream : public PyRep
 {
 public:
+    // default c'tor
     PyChecksumedStream( PyRep* t, uint32 sum );
     // copy c'tor
     PyChecksumedStream( const PyChecksumedStream& oth );

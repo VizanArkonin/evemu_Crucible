@@ -220,7 +220,7 @@ protected:
         _log(ITEM__ERROR, "Trying to load %s as Ship.", sDataMgr.GetCategoryName(type.categoryID()));
         if (sConfig.debug.StackTrace)
             EvE::traceStack();
-        return RefPtr<_Ty>();
+        return RefPtr<_Ty>(nullptr);
     }
 
     //bool LoadAttributes();
@@ -371,7 +371,7 @@ public:
 
     bool GetFleetSMBUsage()                             { return m_allowFleetSMBUsage; }
     void SetFleetSMBUsage(bool set=false)               { m_allowFleetSMBUsage = set; }
-    
+
 protected:
     ShipItemRef m_shipRef;
 
@@ -400,7 +400,6 @@ private:
 
     /* launched drones */
     std::map<uint32, InventoryItem*> m_drones;
-
 };
 
 #endif /* !__SHIP__H__INCL__ */

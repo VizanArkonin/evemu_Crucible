@@ -16,7 +16,7 @@
  *  a new iteration of this class is created for each system as that system is booted.
  */
 
-#include "system/SystemGPoint.h"
+
 #include "system/cosmicMgrs/ManagerDB.h"
 
 
@@ -36,8 +36,8 @@ class AnomalyMgr
     void Close();
     void Process();
 
-    void SaveAnomaly();
     void CreateAnomaly(int8 typeID=0);
+    void SaveAnomaly(CosmicSignature& sig);
     void LoadAnomalies();
 
     //  assign sigID and add to anom list to allow showing on scanner
@@ -53,10 +53,11 @@ class AnomalyMgr
 
     const char* GetScanGroupName(uint8 groupID=0);
 
+    void RegisterExitWH(CosmicSignature &sig);
+
 protected:
     ManagerDB m_mdb;
     ServiceDB m_sdb;
-    SystemGPoint m_gp;
 
     uint8 GetDungeonType();
 
@@ -72,6 +73,7 @@ private:
     Timer m_procTimer;
 
     bool m_initalized;
+    bool m_firstSpawn;
 
     // internal data counters   hard-capped at 256/128
     uint8 m_maxSigs;    // max total for this system
@@ -89,11 +91,11 @@ private:
     // system total, including pos, wrecks, ships.  65535 *should* be large enough
     uint16 m_Anoms; // this counts signals added thru sysmgr also
 
+    std::vector<uint8> m_typeList; // List of pregenerated signature types for this system
 
     std::map<uint32, CosmicSignature> m_sigByItemID;            // signatures in system - need probes to scan down
     std::map<uint32, CosmicSignature> m_anomByItemID;           // anomalies in system - no probes needed
     std::map<std::string, CosmicSignature> m_sigBySigID;        // map for all signatures in system
-
 };
 
 #endif  // EVEMU_SYSTEM_ANOMALYMGR_H_

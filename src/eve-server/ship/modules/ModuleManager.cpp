@@ -14,8 +14,10 @@
 
 #include "EVEServerConfig.h"
 #include "Client.h"
+#include "EntityList.h"
 #include "StaticDataMgr.h"
 #include "effects/EffectsDataMgr.h"
+#include "inventory/Inventory.h"
 #include "ship/Ship.h"
 #include "ship/modules/ModuleItem.h"
 #include "ship/modules/ModuleManager.h"
@@ -155,7 +157,7 @@ bool ModuleManager::Initialize() {
         }
     }
 
-    return m_initalized = true;
+    return (m_initalized = true);
 }
 
 void ModuleManager::LoadOnline() {
@@ -165,7 +167,7 @@ void ModuleManager::LoadOnline() {
     while (ritr != rend) {
         if (ritr->second != nullptr)
             ritr->second->Online();
-            ++ritr;
+        ++ritr;
     }
     // process lo,mid,hi slots in that order.
     std::map<uint8, GenericModule*>::iterator itr = m_fittings.begin(), end = m_fittings.end();
@@ -173,13 +175,13 @@ void ModuleManager::LoadOnline() {
         if (itr->second != nullptr)
             if (itr->second->GetAttribute(AttrOnline).get_bool())
                 itr->second->Online();
-            ++itr;
+        ++itr;
     }
 }
 
 void ModuleManager::Process()
 {
-    double profileStartTime = GetTimeUSeconds();
+    double profileStartTime(GetTimeUSeconds());
 
     // proc modules in order of (low -> mid -> high) for proper fx application
     // NOTE: rigs and subsystems dont need proc tic.
@@ -188,7 +190,7 @@ void ModuleManager::Process()
         if (itr->second != nullptr)
             if (itr->second->GetAttribute(AttrOnline).get_bool())
                 itr->second->Process();
-            ++itr;
+        ++itr;
     }
 
     if (sConfig.debug.UseProfiling)
@@ -301,7 +303,7 @@ GenericModule* ModuleManager::GetModule(EVEItemFlags flag)
 
 GenericModule* ModuleManager::GetModule(uint32 itemID)
 {
-    InventoryItemRef iRef = sItemFactory.GetItem(itemID);
+    InventoryItemRef iRef = sItemFactory.GetItemRef(itemID);
     if (iRef.get() != nullptr)
         return GetModule(iRef->flag());
 
@@ -343,7 +345,7 @@ bool ModuleManager::InstallRig(ModuleItemRef mRef, EVEItemFlags flag) {
         }
         return true;
     } else {
-        codelog(MODULE__TRACE, "ModuleManager","%s tried to fit item %s(%u), which is not a rig", pShipItem->GetPilot()->GetName(), mRef->name(), mRef->itemID());
+        codelog(MODULE__TRACE, "MM::InstallRig() - %s tried to fit %s(%u), which is not a rig", pShipItem->GetPilot()->GetName(), mRef->name(), mRef->itemID());
     }
 
     return false;

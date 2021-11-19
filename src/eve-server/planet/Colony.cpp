@@ -208,7 +208,7 @@ void Colony::Process()
             return;
         }
 
-        double profileStartTime = GetTimeUSeconds();
+        double profileStartTime(GetTimeUSeconds());
         Update();
 
         // profile timer for the colony updates
@@ -348,7 +348,7 @@ void Colony::AbandonColony()
         m_db.RemovePin(cur.first);
         sItemFactory.RemoveItem(cur.first);
     }
-    InventoryItemRef iRef = sItemFactory.GetItem(m_colonyID);
+    InventoryItemRef iRef = sItemFactory.GetItemRef(m_colonyID);
     iRef->Delete();
     m_db.DeleteColony(m_colonyID, m_pSE->GetID(), m_client->GetCharacterID());
     SafeDelete(ccPin);
@@ -375,7 +375,7 @@ void Colony::CreatePin(uint32 groupID, uint32 pinID, uint32 typeID, double latit
     PI_Pin pin = PI_Pin();
     InventoryItemRef iRef(nullptr);
     if (groupID == Command_Centers) {
-        iRef = sItemFactory.GetItem(m_colonyID);
+        iRef = sItemFactory.GetItemRef(m_colonyID);
         if (iRef->quantity() > 1) {
             // check for stack of CC items, and split as needed
             ItemData data(typeID, m_client->GetCharacterID(), locTemp, flagNone, iRef->quantity() -1);
@@ -757,8 +757,11 @@ void Colony::SetSchematic(uint32 pinID, uint8 schematicID/*0*/)
     }
 
     std::map<uint32, PI_Plant>::iterator itr = ccPin->plants.find(pinID);
-    if (itr == ccPin->plants.end())
+    if (itr == ccPin->plants.end()) {
         _log(COLONY__ERROR, "Colony::SetSchematic() - plantID %u not found in ccPin.plants map", pinID);
+        // make client error here
+        return;
+    }
 
     if (schematicID) {
         // install new schematic.  set lastRunTime to 0
@@ -806,7 +809,7 @@ void Colony::InstallProgram(uint32 ecuID, uint16 typeID, float headRadius, Plane
         // uninstall program
         itr->second = PI_Pin();
         // reset extraction quantity in ecu attrib.  this doesnt check for invalid item
-        sItemFactory.GetItem(ecuID)->ResetAttribute(AttrPinExtractionQuantity);
+        sItemFactory.GetItemRef(ecuID)->ResetAttribute(AttrPinExtractionQuantity);
         return;
     }
     if (itr->second.programType != typeID) {
@@ -840,12 +843,12 @@ void Colony::SetProgramResults(uint32 ecuID, uint16 typeID, uint16 numCycles, fl
     itr->second.expiryTime = (cycleTime * numCycles) * EvE::Time::Hour + GetFileTimeNow();
     itr->second.headRadius = headRadius;
     itr->second.qtyPerCycle = qtyPerCycle;
-    itr->second.schematicID = sPIDataMgr.GetHeadType(sItemFactory.GetItem(ecuID)->typeID(), typeID);
+    itr->second.schematicID = sPIDataMgr.GetHeadType(sItemFactory.GetItemRef(ecuID)->typeID(), typeID);
 
     m_db.UpdateECUPin(ecuID, ccPin);
 
     // save extraction quantity in ecu attrib    this doesnt check for invalid item
-    sItemFactory.GetItem(ecuID)->SetAttribute(AttrPinExtractionQuantity, qtyPerCycle, false);
+    sItemFactory.GetItemRef(ecuID)->SetAttribute(AttrPinExtractionQuantity, qtyPerCycle, false);
 
     // set process timer to 30m
     if (!m_colonyTimer.Enabled())
@@ -1071,7 +1074,7 @@ void Colony::PlanetXfer(uint32 spaceportID, std::map< uint32, uint16 > importIte
     // import
     for (auto cur : importItems) {
         // xfer real item to virtual
-        iRef = sItemFactory.GetItem(cur.first);
+        iRef = sItemFactory.GetItemRef(cur.first);
         if (iRef.get() == nullptr) {
             _log(COLONY__ERROR, "Colony::PlanetXfer():import - itemRef for id %u not found in ItemFactory", cur.first);
             continue;   // should never happen
@@ -1346,7 +1349,7 @@ PyRep* Colony::GetColony()
 
 void Colony::Update(bool updateTimes/*false*/)
 {
-    double profileStartTime = GetTimeUSeconds();
+    double profileStartTime(GetTimeUSeconds());
 
     /* loop thru process calls to update each pin to simulate production and logistics
      *  this will have to be fast, as there may/will be large time deltas between updates
@@ -1375,13 +1378,14 @@ void Colony::Update(bool updateTimes/*false*/)
     }
 
     // empty colony runs in 47 - 80 us
-    _log(COLONY__INFO, "Colony::Update() - Update completed in %.3fus with %u links, %u pins, %u plants, and %u routes (s:%u, d:%u) ", \
+    _log(COLONY__INFO, "Colony::Update() - Update completed in %.3fus with %lu links, %lu pins, %lu plants, and %lu routes (s:%lu, d:%lu) ", \
                     GetTimeUSeconds() - profileStartTime, ccPin->links.size(), ccPin->pins.size(), ccPin->plants.size(), ccPin->routes.size(), \
                     m_srcRoutes.size(), m_destRoutes.size());
 }
 
 void Colony::ProcessECUs(bool& updateTimes)
 {
+    /** @todo  this needs complete review/overhaul...many errors here */
     double delta = 0;
     uint16 cycles = 0, quantity = 0, amount = 0, count = 0;
     std::map<uint16, uint32>::iterator itemItr;
@@ -1409,7 +1413,7 @@ void Colony::ProcessECUs(bool& updateTimes)
         /** @todo  as i dont have data on planet resources, and am not tracking depletion, extraction qtys used here are
          * sent from the client during 'survey program' installation, and do not simulate the diminishing returns as shown in
          * the survey program. (testing diminishing returns @ 95%)
-         * because of this, the values used here (and all subsquent processes) will be more than shown in client.
+         * because of this, the values used here (and all subsequent processes) will be more than shown in client.
          */
         /** @note this is a simple process, as it only provides raw mats, simulating extraction from planet and
          *  shipped to storage or directly to plant for processing.
@@ -1428,7 +1432,7 @@ void Colony::ProcessECUs(bool& updateTimes)
         if (is_log_enabled(COLONY__DEBUG))
             _log(COLONY__DEBUG, "Colony::ProcessECUs() - ECU pin %u - begin processing with %u cycles (%0.2f / %0.2f)", \
                     ecu.first, cycles, delta, (ecu.second.cycleTime / EvE::Time::Hour));
-        auto destRouteItr = m_destRoutes.equal_range(plant->first);
+        auto destRouteItr = m_destRoutes.equal_range(plant->first);  // sum ting wong
         for (auto it = destRouteItr.first; it != destRouteItr.second; ++it) {
             // verify this route begins at this pin.
             //if (it->second.srcPinID != ecu.first)

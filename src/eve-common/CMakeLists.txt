@@ -34,7 +34,8 @@ SET( INCLUDE
      "${TARGET_INCLUDE_DIR}/EVE_Skills.h"
      "${TARGET_INCLUDE_DIR}/EVE_Spawn.h"
      "${TARGET_INCLUDE_DIR}/EVE_Typedefs.h"
-     "${TARGET_INCLUDE_DIR}/EVE_Wallet.h" )
+     "${TARGET_INCLUDE_DIR}/EVE_Wallet.h"
+     "${TARGET_INCLUDE_DIR}/EVE_Station.h")
 SET( SOURCE
      "" )
 
@@ -95,7 +96,6 @@ SET( packets_INCLUDE
      "${TARGET_PACKETS_DIR}/packets/CorporationPkts.h"
      "${TARGET_PACKETS_DIR}/packets/Contracts.h"
      "${TARGET_PACKETS_DIR}/packets/Crypto.h"
-     #"${TARGET_PACKETS_DIR}/packets/Damage.h"
      "${TARGET_PACKETS_DIR}/packets/Destiny.h"
      "${TARGET_PACKETS_DIR}/packets/DogmaIM.h"
      "${TARGET_PACKETS_DIR}/packets/Fleet.h"
@@ -129,7 +129,6 @@ SET( packets_SOURCE
      "${TARGET_PACKETS_DIR}/packets/CorporationPkts.cpp"
      "${TARGET_PACKETS_DIR}/packets/Contracts.cpp"
      "${TARGET_PACKETS_DIR}/packets/Crypto.cpp"
-     #"${TARGET_PACKETS_DIR}/packets/Damage.cpp"
      "${TARGET_PACKETS_DIR}/packets/Destiny.cpp"
      "${TARGET_PACKETS_DIR}/packets/DogmaIM.cpp"
      "${TARGET_PACKETS_DIR}/packets/Fleet.cpp"
@@ -163,7 +162,6 @@ SET( packets_XMLP
      "${TARGET_SOURCE_DIR}/packets/CorporationPkts.xmlp"
      "${TARGET_SOURCE_DIR}/packets/Contracts.xmlp"
      "${TARGET_SOURCE_DIR}/packets/Crypto.xmlp"
-     #"${TARGET_SOURCE_DIR}/packets/Damage.xmlp"
      "${TARGET_SOURCE_DIR}/packets/Destiny.xmlp"
      "${TARGET_SOURCE_DIR}/packets/DogmaIM.xmlp"
      "${TARGET_SOURCE_DIR}/packets/Fleet.xmlp"

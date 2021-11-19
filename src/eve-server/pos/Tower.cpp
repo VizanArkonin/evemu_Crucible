@@ -120,7 +120,6 @@ m_pShieldSE(nullptr)
         m_tsize = 1;  // do something constructive here cause size is wrong
     m_soi = m_self->GetAttribute(AttrPosStructureControlDistanceMax).get_int() * m_tsize;
 
-
     m_tdata = EVEPOS::TowerData();
 
     /** @note these are defined, but i dunno what they are
@@ -169,7 +168,6 @@ void TowerSE::Init()
      */
 
     // take resources, move items, process reactions or whatever needs to be done (follow PI proc code)
-
 }
 
 void TowerSE::InitData() {
@@ -275,7 +273,6 @@ void TowerSE::Online()
 
     // reset timers
     StructureSE::Online();
-
 }
 
 void TowerSE::Operating()
@@ -289,20 +286,17 @@ void TowerSE::Operating()
 
     // reset timers
     StructureSE::Operating();
-
 }
 
 void TowerSE::ReinforceTower()
 {
     //  see how many stront is in tower and set timer accordingly
     // Strontium Clathrates   s:100  m:200  l:400
-
 }
 
 void TowerSE::Reinforced()
 {
     // dunno what to do here yet.
-
 }
 
 void TowerSE::UpdatePassword()
@@ -498,7 +492,7 @@ void TowerSE::CreateForceField()
     if (ifRef.get() == nullptr)
         return;  // we'll get over it
     ifRef->SetPosition(GetPosition());
-    ifRef->SetAttribute(AttrRadius, m_self->GetAttribute(AttrShieldRadius));
+    ifRef->SetAttribute(AttrRadius, m_self->GetAttribute(AttrShieldRadius), false);
     FactionData data = FactionData();
         data.allianceID = m_allyID;
         data.corporationID = m_corpID;

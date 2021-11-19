@@ -116,7 +116,6 @@ BulkMgrService::BulkMgrService( PyServiceMgr *mgr )
     PyCallable_REG_CALL(BulkMgrService, GetFullFilesChunk);
     PyCallable_REG_CALL(BulkMgrService, GetUnsubmittedChunk);
     PyCallable_REG_CALL(BulkMgrService, GetUnsubmittedChanges);
-
 }
 
 BulkMgrService::~BulkMgrService() {
@@ -134,7 +133,7 @@ BULKDATA__DUMP=0
 PyResult BulkMgrService::Handle_UpdateBulk(PyCallArgs &call)
 {
     /*
-    sLog.White( "BulkMgrService::Handle_UpdateBulk()", "size=%li", call.tuple->size());
+    sLog.White( "BulkMgrService::Handle_UpdateBulk()", "size=%lu", call.tuple->size());
     call.Dump(BULKDATA__DUMP);
     updateData = self.bulkMgr.UpdateBulk(changeID, hashValue, branch)
 
@@ -190,7 +189,7 @@ PyResult BulkMgrService::Handle_UpdateBulk(PyCallArgs &call)
 PyResult BulkMgrService::Handle_GetFullFiles(PyCallArgs &call)
 {
     /*
-    sLog.White( "BulkMgrService::Handle_GetFullFiles()", "size=%li", call.tuple->size());
+    sLog.White( "BulkMgrService::Handle_GetFullFiles()", "size=%lu", call.tuple->size());
     call.Dump(BULKDATA__DUMP);
         toBeChanged, bulksEndingInChunk, numberOfChunks, chunkSetID, self.allowUnsubmitted = self.bulkMgr.GetFullFiles(toGet)
         -- toGet is sent as PyList of fileIDs server should send back
@@ -301,7 +300,7 @@ PyResult BulkMgrService::Handle_GetFullFiles(PyCallArgs &call)
 PyResult BulkMgrService::Handle_GetFullFilesChunk(PyCallArgs &call)
 {
     /*
-    sLog.White( "BulkMgrService::Handle_GetFullFilesChunk()", "size=%li", call.tuple->size());
+    sLog.White( "BulkMgrService::Handle_GetFullFilesChunk()", "size=%lu", call.tuple->size());
     call.Dump(BULKDATA__DUMP);
         toBeChanged, bulksEndingInChunk = self.bulkMgr.GetFullFilesChunk(chunkSetID, chunkNumber)
             this breaks files up into ?kb chunks for sending to client.  client requests "chunkSetID" and "chunkNumber", where chunkSetID is ???
@@ -342,11 +341,11 @@ PyResult BulkMgrService::Handle_GetFullFilesChunk(PyCallArgs &call)
             response->SetItem(1, PyStatic.NewNone());
         }
     } else if (args.chunkSetID == 1) {
-
+        // not used yet
     } else if (args.chunkSetID == 2) {
-
+        // not used yet
     } else if (args.chunkSetID == 3) {
-
+        // not used yet
     }
 
     response->SetItem(0, toBeChanged);
@@ -357,7 +356,7 @@ PyResult BulkMgrService::Handle_GetVersion(PyCallArgs &call)
 {
     // changeID, branch = self.bulkMgr.GetVersion()
 /*
-    sLog.White( "BulkMgrService::Handle_GetVersion()", "size=%li", call.tuple->size());
+    sLog.White( "BulkMgrService::Handle_GetVersion()", "size=%lu", call.tuple->size());
     call.Dump(BULKDATA__DUMP);
 */
     PyTuple* tuple = new PyTuple(2);
@@ -369,7 +368,7 @@ PyResult BulkMgrService::Handle_GetVersion(PyCallArgs &call)
 PyResult BulkMgrService::Handle_GetAllBulkIDs(PyCallArgs &call)
 {
     /*
-    sLog.White( "BulkMgrService::Handle_GetAllBulkIDs()", "size=%li", call.tuple->size());
+    sLog.White( "BulkMgrService::Handle_GetAllBulkIDs()", "size=%lu", call.tuple->size());
     call.Dump(BULKDATA__DUMP);
      *    serverBulkIDs = self.bulkMgr.GetAllBulkIDs()
      *        PyList of fileIDs of updated data files to be sent to client in bulk
@@ -389,7 +388,7 @@ PyResult BulkMgrService::Handle_GetAllBulkIDs(PyCallArgs &call)
 
 PyResult BulkMgrService::Handle_GetChunk(PyCallArgs &call)
 {
-    sLog.White( "BulkMgrService::Handle_GetChunk()", "size=%li", call.tuple->size());
+    sLog.White( "BulkMgrService::Handle_GetChunk()", "size=%lu", call.tuple->size());
     call.Dump(BULKDATA__DUMP);
     /*
      *    toBeChanged = self.bulkMgr.GetChunk(changeID, chunkNumber)
@@ -411,7 +410,7 @@ PyResult BulkMgrService::Handle_GetChunk(PyCallArgs &call)
 
 PyResult BulkMgrService::Handle_GetUnsubmittedChunk(PyCallArgs &call)
 {
-    sLog.White( "BulkMgrService::Handle_GetUnsubmittedChunk()", "size=%li", call.tuple->size());
+    sLog.White( "BulkMgrService::Handle_GetUnsubmittedChunk()", "size=%lu", call.tuple->size());
     call.Dump(BULKDATA__DUMP);
     /*
                 toBeChanged = self.bulkMgr.GetUnsubmittedChunk(chunkNumber)
@@ -429,7 +428,7 @@ PyResult BulkMgrService::Handle_GetUnsubmittedChunk(PyCallArgs &call)
 
 PyResult BulkMgrService::Handle_GetUnsubmittedChanges(PyCallArgs &call)
 {
-    sLog.White( "BulkMgrService::Handle_GetUnsubmittedChanges()", "size=%li", call.tuple->size());
+    sLog.White( "BulkMgrService::Handle_GetUnsubmittedChanges()", "size=%lu", call.tuple->size());
     call.Dump(BULKDATA__DUMP);
     /*
         unsubmitted = self.bulkMgr.GetUnsubmittedChanges()

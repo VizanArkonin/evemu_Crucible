@@ -27,6 +27,10 @@
 #ifndef __EVE_COMMON_H__INCL__
 #define __EVE_COMMON_H__INCL__
 
+/** @todo  this file has many specific headers not used by everything in evemu.
+ * this should be trimmed down with specific headers in files that need them
+ */
+
 /************************************************************************/
 /* core includes                                                    */
 /************************************************************************/
@@ -46,7 +50,6 @@
 #include "log/logsys.h"
 // math
 #include "math/gpoint.h"
-#include "math/Trig.h"
 // memory
 #include "memory/RefPtr.h"
 // network

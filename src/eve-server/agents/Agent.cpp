@@ -23,6 +23,8 @@
  */
 
 #include "../eve-server.h"
+//#include "../../eve-common/EVE_Skills.h"
+
 #include "../StaticDataMgr.h"
 #include "../station/StationDataMgr.h"
 #include "../map/MapData.h"
@@ -137,8 +139,8 @@ void Agent::MakeOffer(uint32 charID, MissionOffer& offer)
             offer.destinationOwnerID  = m_agentData.corporationID;
             offer.destinationSystemID = m_agentData.solarSystemID;
         }
-
     }
+
     MissionDB::CreateOfferID(offer);
 
     // keep local copy and also add to mission data mgr
@@ -622,10 +624,10 @@ void Agent::UpdateStandings(Client* pClient, uint8 eventID, bool important/*fals
             msg += "failure ";
             newStanding *= sConfig.standings.MissionFailure;
         } break;
-
-        msg += "from ";
-        msg += m_agentData.name;
     }
+
+    msg += "from ";
+    msg += m_agentData.name;
 
     if (pClient->InFleet() and (newStanding > 0)) {
         float fleetStanding = newStanding * sConfig.standings.FleetMissionMultiplier;
@@ -742,6 +744,7 @@ void Agent::SendMissionUpdate(Client* pClient, std::string action)
 
 bool Agent::CanUseAgent(Client* pClient)
 {
+    /** @todo this needs work!!  */
     if (m_agentData.typeID == Agents::Type::Aura)
         return true;
     if (m_agentData.level == 1)
@@ -775,7 +778,7 @@ bool Agent::CanUseAgent(Client* pClient)
 
     _log(AGENT__DEBUG, "%s(%u) CanUseAgent() - charSkills(con:%u,dip:%u,cri:%u), stand(%f, %f, %f)",\
                 m_agentData.name.c_str(), m_agentID, sConn, sDiplo, sCrim, charStanding, bonus, standing);
-    _log(AGENT__DEBUG, "%s(%u) CanUseAgent() - standings(fac:%u,crp:%u,chr:%u), bonus(%f, %f, %f) - m=%f", \
+    _log(AGENT__DEBUG, "%s(%u) CanUseAgent() - standings(fac:%.3f,crp:%.3f,chr:%.3f), bonus(%f, %f, %f) - m=%f", \
                 m_agentData.name.c_str(), m_agentID, facChr, corpChr, charChr, facBonus, corpBonus, charBonus, m);
 
     if ((EvE::max(facChr, corpChr, charChr) >= m ) and (EvE::min(facChr, corpChr, charChr) > -2.0f)) {

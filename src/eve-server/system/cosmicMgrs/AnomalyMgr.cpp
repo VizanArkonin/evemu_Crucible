@@ -15,6 +15,7 @@
 #include "EVEServerConfig.h"
 #include "PyServiceMgr.h"
 #include "StaticDataMgr.h"
+#include "map/MapData.h"
 #include "system/SystemBubble.h"
 #include "system/SystemManager.h"
 #include "system/cosmicMgrs/AnomalyMgr.h"
@@ -53,10 +54,19 @@ m_beltMgr(nullptr),
 m_dungMgr(nullptr),
 m_spawnMgr(nullptr),
 m_spawnTimer(0),
-m_procTimer(0)
+m_procTimer(0),
+m_WH(0),
+m_Sigs(0),
+m_Anoms(0),
+m_Grav(0),
+m_Mag(0),
+m_Ladar(0),
+m_Radar(0),
+m_Unrated(0),
+m_Complex(0),
+m_maxSigs(0),
+m_initalized(false)
 {
-    m_initalized = false;
-
     m_sigBySigID.clear();
     m_sigByItemID.clear();
 }
@@ -67,7 +77,7 @@ AnomalyMgr::~AnomalyMgr()
     /*
     InventoryItemRef iRef(nullptr);
     for (auto sig : m_sigByItemID) {
-        iRef = sItemFactory.GetItem(sig.first);
+        iRef = sItemFactory.GetItemRef(sig.first);
         if (iRef.get() == nullptr)
             continue;
         iRef->Delete();
@@ -79,6 +89,7 @@ bool AnomalyMgr::Init(BeltMgr* beltMgr, DungeonMgr* dungMgr, SpawnMgr* spawnMgr)
     m_beltMgr = beltMgr;
     m_dungMgr = dungMgr;
     m_spawnMgr = spawnMgr;
+    m_firstSpawn = true;
 
     if (m_beltMgr == nullptr) {
         _log(COSMIC_MGR__ERROR, "System Init Fault. beltMgr == nullptr.  Not Initializing Anomaly Manager for %s(%u)", m_system->GetName(), m_system->GetID());
@@ -96,46 +107,42 @@ bool AnomalyMgr::Init(BeltMgr* beltMgr, DungeonMgr* dungMgr, SpawnMgr* spawnMgr)
     }
 
     if (!sConfig.cosmic.AnomalyEnabled) {
-         _log(COSMIC_MGR__MESSAGE, "Anomaly System Disabled.  Not Initializing Anomaly Manager for %s(%u)", m_system->GetName(), m_system->GetID());
+        _log(COSMIC_MGR__INIT, "Anomaly System Disabled.  Not Initializing Anomaly Manager for %s(%u)", m_system->GetName(), m_system->GetID());
         return true;
     }
     if (!sConfig.cosmic.DungeonEnabled){
-        _log(COSMIC_MGR__MESSAGE, "Dungeon System Disabled.  Not Initializing Anomaly Manager for %s(%u)", m_system->GetName(), m_system->GetID());
+        _log(COSMIC_MGR__INIT, "Dungeon System Disabled.  Not Initializing Anomaly Manager for %s(%u)", m_system->GetName(), m_system->GetID());
         return true;
     }
 
-    // update the next two for new mission/anomaly/deadspace data.  see notes in spawn mgr
-    if (!sConfig.npc.RoamingSpawns and !sConfig.npc.StaticSpawns) {
-        _log(COSMIC_MGR__MESSAGE, "Spawn System Disabled.  Not Initializing Anomaly Manager for %s(%u)", m_system->GetName(), m_system->GetID());
-        return true;
-    }
-
-    if (!sConfig.cosmic.BeltEnabled) {
-        _log(COSMIC_MGR__MESSAGE, "BeltMgr System Disabled.  Not Initializing Anomaly Manager for %s(%u)", m_system->GetName(), m_system->GetID());
-        return true;
-    }
+    // Load saved anomalies from db upon system init
+    LoadAnomalies();
 
     // set internal check data
     // range is 0.1 for 1.0 system to 2.0 for -0.9 system
     float security = m_system->GetSecValue();
     if (sConfig.debug.IsTestServer) {
-        m_maxSigs = 2;
-        m_procTimer.Start(10000);  // 10s
+        m_maxSigs = 3;
+
+        // Add wormholes by default to the type list for test server
+        m_typeList.push_back(Dungeon::Type::Wormhole);
+        m_WH++;
     } else {
              if (security == 2.0)  { m_maxSigs = 25; }
-        else if (security > 1.501) { m_maxSigs = 20; }
-        else if (security > 1.001) { m_maxSigs = 15; }
-        else if (security > 0.751) { m_maxSigs = 12; }
-        else if (security > 0.451) { m_maxSigs = 8; }
-        else if (security > 0.251) { m_maxSigs = 5; }
+        else if (security > 1.499) { m_maxSigs = 20; }
+        else if (security > 0.999) { m_maxSigs = 15; }
+        else if (security > 0.749) { m_maxSigs = 12; }
+        else if (security > 0.449) { m_maxSigs = 8; }
+        else if (security > 0.249) { m_maxSigs = 5; }
         else                       { m_maxSigs = 3; }
-
-        m_procTimer.Start(120000);  // 2m
     }
 
-    m_WH = 0;
-    m_Sigs = 0;
-    m_Anoms = 0;
+    m_procTimer.Start(1000); // Initial 5s timer to ensure everything gets loaded correctly
+    // populate the type vector with all of the anomaly types we will use in this system
+    for (int i = 0; i < m_maxSigs; i++) {
+        m_typeList.push_back(GetDungeonType());
+    }
+
     // these use config option to (en/dis)able individual types
     m_Grav = sConfig.exploring.Gravametric;
     m_Mag = sConfig.exploring.Magnetometric;
@@ -147,7 +154,7 @@ bool AnomalyMgr::Init(BeltMgr* beltMgr, DungeonMgr* dungMgr, SpawnMgr* spawnMgr)
     /* load current data?, start timers, process current data, and create new items, if needed */
     /** @todo all anomalies are currently temp items.  if/when we start saving them, create new table and itemIDs*/
 
-    _log(COSMIC_MGR__MESSAGE, "AnomalyMgr Initialized for %s(%u) with %u Max Signals for security class %0.2f.  Test Server is %s", \
+    _log(COSMIC_MGR__INIT, "AnomalyMgr Initialized for %s(%u) with %u Max Signals for security class %0.2f.  Test Server %s", \
                 m_system->GetName(), m_system->GetID(), m_maxSigs, security, sConfig.debug.IsTestServer?"enabled":"disabled");
 
     return (m_initalized = true);
@@ -157,15 +164,34 @@ void AnomalyMgr::Process() {
     if (!m_initalized)
         return;
     if (m_procTimer.Check(/*!sConfig.debug.IsTestServer*/)) {
-        if (m_Sigs < m_maxSigs)
-            CreateAnomaly();
-        if (m_Anoms < (m_maxSigs /2))
-            CreateAnomaly(Dungeon::Type::Anomaly);
+        // Only generate new signals when a player is in the system
+        if (m_system->PlayerCount() > 0) {
+            // ensure that all wormholes are created at the beginning when the system is loaded
+            auto it = find(m_typeList.begin(), m_typeList.end(), Dungeon::Type::Wormhole);
+            if (it != m_typeList.end()) {
+                m_typeList.erase(m_typeList.begin()+(it - m_typeList.begin()));
+                CreateAnomaly(Dungeon::Type::Wormhole);
+            }
+            if (m_Sigs < m_maxSigs)
+                CreateAnomaly();
+            if (m_Anoms < (m_maxSigs /2))
+                CreateAnomaly(Dungeon::Type::Anomaly);
+        }
+        // Once initial spawn is complete, set correct timer based upon whether this is test server or not
+        if (m_firstSpawn) {
+            if (sConfig.debug.IsTestServer) {
+                m_procTimer.SetTimer(10000);  // 10s
+            } else {
+                m_procTimer.SetTimer(120000);  // 2m
+            }
+            m_firstSpawn = false;
+        }
     }
+    //TODO: Implement checking for expired anomalies
+    /*if (m_spawnTimer.Check(false)) {
+        // Check for expired anomalies and delete them
 
-    //if (m_spawnTimer.Check(false)) {
-    //    /* do something useful here */
-    //}
+    }*/
 }
 
 void AnomalyMgr::Close()
@@ -174,19 +200,47 @@ void AnomalyMgr::Close()
 }
 
 void AnomalyMgr::LoadAnomalies() {
-    //. is this needed?  probably not.  make em all dynamic
     // check for existing data and load accordingly.
     // this will only hit on system load
+    DBQueryResult res;
+    m_mdb.GetAnomaliesBySystem(m_system->GetID(), res);
+    DBResultRow row;
+    while (res.GetRow(row)) {
+        //sigID,sigItemID,dungeonType,sigName,systemID,sigTypeID,sigGroupID,scanGroupID,scanAttributeID,wormholeID,x,y,z
+        CosmicSignature sig = CosmicSignature();
+        sig.sigID = row.GetText(0);
+        sig.sigItemID = row.GetInt(1);
+        sig.dungeonType = row.GetInt(2);
+        sig.sigName = row.GetText(3);
+        sig.systemID = row.GetInt(4);
+        sig.sigTypeID = row.GetInt(5);
+        sig.sigGroupID = row.GetInt(6);
+        sig.scanGroupID = row.GetInt(7);
+        sig.sigStrength = 10.0f;
+        sig.scanAttributeID = row.GetInt(8);
+        sig.position.x = row.GetDouble(9);
+        sig.position.y = row.GetDouble(10);
+        sig.position.z = row.GetDouble(11);
 
-    // get loaded type data and save in memobj for later use
+        // Register loaded signatures
+        m_dungMgr->MakeDungeon(sig);
+        m_sigBySigID.emplace(sig.sigID, sig);
+        m_sigByItemID.emplace(sig.sigItemID, sig);
+        ++m_Sigs;
+
+        _log(COSMIC_MGR__MESSAGE, "AnomalyMgr::LoadAnomalies() - Created Signal %s(%u) for %s in %s(%u), bubbleID %u with %.3f%% sigStrength.", \
+        sDunDataMgr.GetDungeonType(sig.dungeonType), sig.dungeonType, \
+        sig.sigName.c_str(), m_system->GetName(), sig.systemID, sig.bubbleID, sig.sigStrength *100);
+    }
+
 }
 
-void AnomalyMgr::SaveAnomaly()
+void AnomalyMgr::SaveAnomaly(CosmicSignature& sig)
 {
-    // same as above...not needed but used for testing for now.
-    //will have to rewrite scan system to use data from here
-    for (auto sig : m_sigByItemID)
-        m_mdb.SaveAnomaly(sig.second);
+    // Save anomalies based upon their type to the database
+    if (sig.dungeonType == Dungeon::Type::Wormhole) {
+        m_mdb.SaveAnomaly(sig);
+    }
 }
 
 void AnomalyMgr::GetSignatureList(std::vector<CosmicSignature>& sig)
@@ -228,7 +282,7 @@ void AnomalyMgr::CreateAnomaly(int8 typeID/*0*/)
     //    return;     // make error here?
 
     if (typeID == 0) {
-        sig.dungeonType = GetDungeonType();
+        sig.dungeonType = m_typeList[m_anomByItemID.size() + m_sigByItemID.size()];
     } else {  // proc calling anomaly or mission/escalation being setup.
         sig.dungeonType = typeID;
     }
@@ -239,41 +293,40 @@ void AnomalyMgr::CreateAnomaly(int8 typeID/*0*/)
         return;
     }
 
-    sig.position = m_gp.GetAnomalyPoint(m_system);
+    sig.position = sMapData.GetAnomalyPoint(m_system);
 
     // some sites will use sys sov for ships.  use this for them....
     // sig.ownerID = sDataMgr.GetRegionFaction(m_system->GetRegionID());
-    using namespace Dungeon::Type;
     switch(sig.dungeonType) {
-        case Gravimetric: { // 2
+        case Dungeon::Type::Gravimetric: { // 2
             sig.sigTypeID = EVEDB::invTypes::CosmicSignature;
             sig.sigGroupID = EVEDB::invGroups::Cosmic_Signature;
             sig.scanGroupID = Scanning::Group::Signature;
             sig.scanAttributeID = AttrScanGravimetricStrength;
         } break;
-        case Magnetometric: { // 3,
+        case Dungeon::Type::Magnetometric: { // 3,
             sig.sigTypeID = EVEDB::invTypes::DeadspaceSignature;// need probes and exploring skills
             sig.sigGroupID = EVEDB::invGroups::Cosmic_Signature;
             sig.scanGroupID = Scanning::Group::Signature;
             sig.scanAttributeID = AttrScanMagnetometricStrength;
         } break;
-        case Radar: {       // 4,
+        case Dungeon::Type::Radar: {       // 4,
             sig.sigTypeID = EVEDB::invTypes::DeadspaceSignature;
             sig.sigGroupID = EVEDB::invGroups::Cosmic_Signature;
             sig.scanGroupID = Scanning::Group::Signature;
             sig.scanAttributeID = AttrScanRadarStrength;
         } break;
-        case Ladar: {       // 5,
+        case Dungeon::Type::Ladar: {       // 5,
             sig.sigTypeID = EVEDB::invTypes::DeadspaceSignature;
             sig.sigGroupID = EVEDB::invGroups::Cosmic_Signature;
             sig.scanGroupID = Scanning::Group::Signature;
             sig.scanAttributeID = AttrScanLadarStrength;
         } break;
-        case Wormhole: {    // 6
+        case Dungeon::Type::Wormhole: {    // 6
             // enable WH to be warped to...they are deco only at this time.
             //  once working, these will be by probe only, and removed from anomaly list
             sig.sigTypeID = EVEDB::invTypes::CosmicSignature;
-            sig.sigGroupID = EVEDB::invGroups::Cosmic_Signature;
+            sig.sigGroupID = EVEDB::invGroups::Wormhole;
             sig.scanGroupID = Scanning::Group::Signature;
             sig.scanAttributeID = AttrScanAllStrength;  // Unknown
             // hand off to WHMgr for creation and exit after return
@@ -283,16 +336,18 @@ void AnomalyMgr::CreateAnomaly(int8 typeID/*0*/)
                 m_sigBySigID.emplace(sig.sigID, sig);
                 m_sigByItemID.emplace(sig.sigItemID, sig);
             }
+            // Save wormhole to the database for later loading
+            SaveAnomaly(sig);
             return;
         } break;
-        case Anomaly: {      // 7   simple combat sites
+        case Dungeon::Type::Anomaly: {      // 7   simple combat sites
             sig.sigTypeID = EVEDB::invTypes::CosmicAnomaly;
             sig.sigGroupID = EVEDB::invGroups::Cosmic_Anomaly;
             sig.scanGroupID = Scanning::Group::Anomaly;
             sig.scanAttributeID = AttrScanAllStrength;
             sig.sigStrength = 1.0f;
         } break;
-        case Mission: {      // 1
+        case Dungeon::Type::Mission: {      // 1
             sig.sigTypeID = EVEDB::invTypes::CosmicSignature;
             sig.sigGroupID = EVEDB::invGroups::Cosmic_Signature;
             sig.scanGroupID = Scanning::Group::Signature;
@@ -300,9 +355,9 @@ void AnomalyMgr::CreateAnomaly(int8 typeID/*0*/)
             // we're not counting mission shit in sig count
         }
         // these will use default for now.  revisit later when system matures more and i better understand how to implement them.
-        case Escalation:   // 9
-        case Unrated:       // 8
-        case Rated: { // 10
+        case Dungeon::Type::Escalation:   // 9
+        case Dungeon::Type::Unrated:       // 8
+        case Dungeon::Type::Rated: { // 10
             sig.sigTypeID = EVEDB::invTypes::DeadspaceSignature;
             sig.sigGroupID = EVEDB::invGroups::Cosmic_Signature;
             sig.scanGroupID = Scanning::Group::Signature;
@@ -329,48 +384,63 @@ void AnomalyMgr::CreateAnomaly(int8 typeID/*0*/)
         ++m_Sigs;
     }
 
-    //m_mdb.SaveAnomaly(sig);
+    // Save anomaly to the database for later loading
+    SaveAnomaly(sig);
 
     _log(COSMIC_MGR__MESSAGE, "AnomalyMgr::Create() - Created Signal %s(%u) for %s in %s(%u), bubbleID %u with %.3f%% sigStrength.", \
             sDunDataMgr.GetDungeonType(sig.dungeonType), sig.dungeonType, \
             sig.sigName.c_str(), m_system->GetName(), sig.systemID, sig.bubbleID, sig.sigStrength *100);
 }
 
+// Register an exit wormhole created by WhMgr's 'CreateExit()' function
+void AnomalyMgr::RegisterExitWH(CosmicSignature &sig)
+{
+    m_sigBySigID.emplace(sig.sigID, sig);
+    m_sigByItemID.emplace(sig.sigItemID, sig);
+    ++m_Sigs;
+
+    // Save anomaly to the database for later loading
+    SaveAnomaly(sig);
+
+    _log(COSMIC_MGR__MESSAGE, "AnomalyMgr::RegisterExitWH() - Created Signal %s(%u) for %s in %s(%u), bubbleID %u with %.3f%% sigStrength.", \
+            sDunDataMgr.GetDungeonType(sig.dungeonType), sig.dungeonType, \
+            sig.sigName.c_str(), m_system->GetName(), sig.systemID, sig.bubbleID, sig.sigStrength *100);
+}
+
 uint8 AnomalyMgr::GetDungeonType()
 {
-    using namespace Dungeon::Type;
     uint8 typeID = MakeRandomInt(2,10); // skip typeMission
     switch(typeID) {
-        case Escalation:  // 9
-        case Mission: {   // 1
+        case Dungeon::Type::Escalation:  // 9
+        case Dungeon::Type::Mission: {   // 1
             // cannot create this type here.  try again.
             return GetDungeonType();
         } break;
-        case Gravimetric: {   // 2
+        case Dungeon::Type::Gravimetric: {   // 2
             if (m_Grav < 0)
                 return GetDungeonType();
 
             ++m_Grav;
         } break;
-        case Magnetometric: {   // 3
+        case Dungeon::Type::Magnetometric: {   // 3
             if (m_Mag < 0)
                 return GetDungeonType();
 
             ++m_Mag;
         } break;
-        case Radar: {   // 4
+        case Dungeon::Type::Radar: {   // 4
             if (m_Radar < 0)
                 return GetDungeonType();
 
             ++m_Radar;
         } break;
-        case Ladar: {   // 5
+        case Dungeon::Type::Ladar: {   // 5
             if (m_Ladar < 0)
                 return GetDungeonType();
 
             ++m_Ladar;
         } break;
-        case Wormhole: {   // 6
+        case Dungeon::Type::Wormhole: {   // 6
             // cap at 1 per system, except k162...which ISNT created in this system (it's an exit, from WMS)
             //  this will need updating and be controlled by WMS.  it will have full control of WH amounts/locations
             if (m_WH != 0)
@@ -378,17 +448,17 @@ uint8 AnomalyMgr::GetDungeonType()
 
             ++m_WH;
         } break;
-        case Anomaly: {   // 7. this is noob dungeon, no probe required
+        case Dungeon::Type::Anomaly: {   // 7. this is noob dungeon, no probe required
             if (m_Anoms > (m_maxSigs /2))
                 return GetDungeonType();
         } break;
-        case Unrated: {   // 8
+        case Dungeon::Type::Unrated: {   // 8
             if ((m_Unrated < 0) or (m_Unrated > 2)) // cap at 3
                 return GetDungeonType();
 
             ++m_Unrated;
         } break;
-        case Rated: {  // 10
+        case Dungeon::Type::Rated: {  // 10
             if ((m_Complex < 0) or (m_Complex > 1)) // cap at 2
                 return GetDungeonType();
 

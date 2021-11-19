@@ -7,6 +7,7 @@
 #include "account/AccountService.h"
 #include "character/Character.h"
 #include "effects/EffectsProcessor.h"
+#include "inventory/Inventory.h"
 #include "npc/Drone.h"
 #include "ship/Ship.h"
 #include "ship/modules/GenericModule.h"
@@ -94,9 +95,9 @@ void ShipItem::LogOut()
     // remove ship item from its' container's inventory list also.
     Inventory* pInv(nullptr);
     if (sDataMgr.IsStation(locationID())) {
-        pInv = sItemFactory.GetStationItem(locationID())->GetMyInventory();
+        pInv = sItemFactory.GetStationRef(locationID())->GetMyInventory();
     } else {
-        pInv = sItemFactory.GetSolarSystem(locationID())->GetMyInventory();
+        pInv = sItemFactory.GetSolarSystemRef(locationID())->GetMyInventory();
     }
 
     if (pInv != nullptr)
@@ -667,7 +668,7 @@ void ShipItem::LoadChargesToBank(EVEItemFlags flag, std::vector< int32 >& charge
     for (auto cur : modVec) {
         if (pos + 1 > chargeIDs.size())
             return;
-        cRef = sItemFactory.GetItem(chargeIDs[pos]);
+        cRef = sItemFactory.GetItemRef(chargeIDs[pos]);
         if (cRef.get() == nullptr) {
             ++pos;
             continue;
@@ -688,7 +689,7 @@ void ShipItem::LoadLinkedWeapons(GenericModule* pMod, std::vector<int32>& charge
         return;
 
     int8 pos = 0;
-    InventoryItemRef cRef(sItemFactory.GetItem(chargeIDs[pos]));
+    InventoryItemRef cRef(sItemFactory.GetItemRef(chargeIDs[pos]));
     if (cRef.get() == nullptr)
         throw UserError ("CantFindChargeToAdd");
 
@@ -699,7 +700,7 @@ void ShipItem::LoadLinkedWeapons(GenericModule* pMod, std::vector<int32>& charge
     // loop thru slaves and load charge(s)
     std::list<GenericModule*>::iterator itr2 = itr->second.begin();
     while ((itr2 != itr->second.end()) and (pos <= size)) {
-        cRef = sItemFactory.GetItem(chargeIDs[pos]);
+        cRef = sItemFactory.GetItemRef(chargeIDs[pos]);
         if (cRef.get() == nullptr){
             ++pos;
         } else if (IsCargoHoldFlag(cRef->flag()) or IsHangarFlag(cRef->flag())) {
@@ -880,11 +881,10 @@ void ShipItem::UpdateModules(EVEItemFlags flag)
 //  Updated fractional ship defense settings.  -allan 1Feb15
 void ShipItem::SetShipCapacitorLevel(float fraction)
 {
-    if (fraction > 1.0) fraction = 1.0;
-    if (fraction < 0.0) fraction = 0.0;
+    if (fraction > 1.0f) fraction = 1.0f;
+    if (fraction < 0.0f) fraction = 0.0f;
 
-    EvilNumber newCapacitorCharge(EvilZero);
-    newCapacitorCharge = GetAttribute(AttrCapacitorCapacity) * fraction;
+    EvilNumber newCapacitorCharge(GetAttribute(AttrCapacitorCapacity) * fraction);
     if ((newCapacitorCharge + 0.5f) > GetAttribute(AttrCapacitorCapacity).get_float())
         newCapacitorCharge = GetAttribute(AttrCapacitorCapacity);
     if ((newCapacitorCharge - 0.5f) < 0)
@@ -896,11 +896,10 @@ void ShipItem::SetShipCapacitorLevel(float fraction)
 
 void ShipItem::SetShipShield(float fraction)
 {
-    if (fraction > 1.0) fraction = 1.0;
-    if (fraction < 0.0) fraction = 0.0;
+    if (fraction > 1.0f) fraction = 1.0f;
+    if (fraction < 0.0f) fraction = 0.0f;
 
-    EvilNumber newShieldCharge(EvilZero);
-    newShieldCharge = GetAttribute(AttrShieldCapacity) * fraction;
+    EvilNumber newShieldCharge(GetAttribute(AttrShieldCapacity) * fraction);
     if ((newShieldCharge + 0.2f) > GetAttribute(AttrShieldCapacity).get_float())
         newShieldCharge = GetAttribute(AttrShieldCapacity);
     if ((newShieldCharge - 0.2f) < 0)
@@ -914,11 +913,10 @@ void ShipItem::SetShipArmor(float fraction)
 {
     fraction = 1 - fraction;
 
-    if (fraction > 1.0) fraction = 1.0;
-    if (fraction < 0.0) fraction = 0.0;
+    if (fraction > 1.0f) fraction = 1.0f;
+    if (fraction < 0.0f) fraction = 0.0f;
 
-    EvilNumber newArmorDamage(EvilZero);
-    newArmorDamage = GetAttribute(AttrArmorHP) * fraction;
+    EvilNumber newArmorDamage(GetAttribute(AttrArmorHP) * fraction);
     if ((newArmorDamage + 0.2f) > GetAttribute(AttrArmorHP).get_float())
         newArmorDamage = GetAttribute(AttrArmorHP);
     if ((newArmorDamage - 0.2f) < 0)
@@ -932,11 +930,10 @@ void ShipItem::SetShipHull(float fraction)
 {
     fraction = 1 - fraction;
 
-    if (fraction > 1.0) fraction = 1.0;
-    if (fraction < 0.0) fraction = 0.0;
+    if (fraction > 1.0f) fraction = 1.0f;
+    if (fraction < 0.0f) fraction = 0.0f;
 
-    EvilNumber newHullDamage(EvilZero);
-    newHullDamage = GetAttribute(AttrHP) * fraction;
+    EvilNumber newHullDamage(GetAttribute(AttrHP) * fraction);
     if ((newHullDamage + 0.2f) > GetAttribute(AttrHP).get_float())
         newHullDamage = GetAttribute(AttrHP);
     if ((newHullDamage - 0.2f) < 0)
@@ -1039,7 +1036,7 @@ void ShipItem::Offline(uint32 modID)
 void ShipItem::Activate(int32 itemID, std::string effectName, int32 targetID, int32 repeat)
 {
     if (IsValidTarget(targetID)) {
-        m_targetRef = sItemFactory.GetItem(targetID);
+        m_targetRef = sItemFactory.GetItemRef(targetID);
     } else {
         m_targetRef = InventoryItemRef(nullptr);
     }
@@ -1793,8 +1790,8 @@ void ShipItem::LoadWeaponGroups()
 // new effects system.  wip
 void ShipItem::ProcessEffects(bool add/*false*/, bool update/*false*/)
 {
+    double startTime(GetTimeMSeconds());
     _log(EFFECTS__TRACE, "ShipItem::ProcessEffects()");
-    double start = GetTimeMSeconds();
     /*
     Effects processing order...
         Skills     //char effect
@@ -1828,7 +1825,7 @@ void ShipItem::ProcessEffects(bool add/*false*/, bool update/*false*/)
         // do we remove fx here?  nah, we've reset everything at this point.
     }
 
-    _log(EFFECTS__DEBUG, "ShipItem::ProcessEffects() - effects processed and applied in %.3fms", (GetTimeMSeconds() - start));
+    _log(EFFECTS__DEBUG, "ShipItem::ProcessEffects() - effects processed and applied in %.3fms", (GetTimeMSeconds() - startTime));
 }
 
 void ShipItem::ProcessShipEffects(bool update/*false*/)
@@ -1840,9 +1837,6 @@ void ShipItem::ProcessShipEffects(bool update/*false*/)
         data.srcRef = static_cast<InventoryItemRef>(this);
         sFxProc.ParseExpression(this, sFxDataMgr.GetExpression(it.second.preExpression), data);
     }
-    // apply processed ship effects
-    sFxProc.ApplyEffects(this, m_pilot->GetChar().get(), this, update);
-    //ClearModifiers();
 
     if (m_isUndocking) {
         // online modules sent from client (these are onlined in fit window while docked)
@@ -1853,6 +1847,10 @@ void ShipItem::ProcessShipEffects(bool update/*false*/)
         // this will set module to last saved online state in the case of BoardShip() and Login()
         m_ModuleManager->LoadOnline();
     }
+
+    // apply processed effects
+    sFxProc.ApplyEffects(this, m_pilot->GetChar().get(), this, update);
+    //ClearModifiers();
 }
 
 void ShipItem::ClearModuleModifiers()
@@ -2450,7 +2448,7 @@ void ShipSE::Process() {
         return;
 
     if (m_processTimer.Check()) {
-        double profileStartTime = GetTimeUSeconds();
+        double profileStartTime(GetTimeUSeconds());
         // shield
         float Charge = m_self->GetAttribute(AttrShieldCharge).get_float();
         float Capacity = m_self->GetAttribute(AttrShieldCapacity).get_float();

@@ -61,7 +61,7 @@ TargetManager::TargetManager(SystemEntity *self)
 }
 
 bool TargetManager::Process() {
-    double profileStartTime = GetTimeUSeconds();
+    double profileStartTime(GetTimeUSeconds());
 
     if (m_targets.empty())
         return false;
@@ -159,10 +159,9 @@ bool TargetManager::StartTargeting(SystemEntity *tSE, ShipItemRef sRef)
             return false;
         }
     } else if (tSE->IsOutpostSE()) {
-        if (tSE->GetOutpostSE()->GetState() == EVEPOS::StructureState::Online) { //TODO: This structure state likely will be different for outposts, will change later.
+            // For now, don't allow targeting outposts. This will need to be changed later.
             mySE->GetPilot()->SendNotifyMsg("You cannot target an invulnerable structure.");
             return false;
-        }
     }
 
     // Check against max target range
@@ -181,7 +180,7 @@ bool TargetManager::StartTargeting(SystemEntity *tSE, ShipItemRef sRef)
     }
 
     // Calculate Time to Lock target:
-    float lockTime = TimeToLock( sRef, tSE );
+    float lockTime = TimeToLock(sRef, tSE);
 
     TargetEntry *te = new TargetEntry();
         te->state = TargMgr::State::Locking;
@@ -189,13 +188,14 @@ bool TargetManager::StartTargeting(SystemEntity *tSE, ShipItemRef sRef)
     m_targets[tSE] = te;
     tSE->TargetMgr()->TargetedAdd(mySE);
 
-    _log(TARGET__INFO, "Pilot %s in %s(%u) started targeting %s(%u) (%.2fs lock time)", \
-            mySE->GetPilot()->GetName(), mySE->GetName(), mySE->GetID(), tSE->GetName(), tSE->GetID(), lockTime);
+    if (is_log_enabled(TARGET__INFO))
+        _log(TARGET__INFO, "Pilot %s in %s(%u) started targeting %s(%u) at %.1fm with %.2fs lock time.", \
+                mySE->GetPilot()->GetName(), mySE->GetName(), mySE->GetID(), tSE->GetName(), \
+                tSE->GetID(), targetDistance, lockTime);
 
     sEntityList.AddTargMgr(mySE, this);
 
     Dump();
-
     return true;
 }
 

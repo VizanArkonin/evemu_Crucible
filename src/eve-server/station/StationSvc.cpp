@@ -25,14 +25,13 @@
 
 #include "eve-server.h"
 
+#include "Client.h"
 #include "PyServiceCD.h"
 #include "StaticDataMgr.h"
 #include "cache/ObjCacheService.h"
 #include "station/StationDataMgr.h"
 #include "station/StationSvc.h"
-
 #include "system/sov/SovereigntyDataMgr.h"
-#include "Client.h"
 
 
 PyCallable_Make_InnerDispatcher(StationSvc)
@@ -67,8 +66,8 @@ PyResult StationSvc::Handle_GetSolarSystem(PyCallArgs &call) {
 
     ObjectCachedMethodID method_id(GetName(), "GetSolarSystem");
 
-    if(!m_manager->cache_service->IsCacheLoaded(method_id)) {
-        PyPackedRow *t = SystemDB::GetSolarSystem(arg.arg);
+    if (!m_manager->cache_service->IsCacheLoaded(method_id)) {
+        PyPackedRow *t = SystemDB::GetSolarSystemPackedRow(arg.arg);
 
         m_manager->cache_service->GiveCache(method_id, (PyRep **)&t);
     }
@@ -88,7 +87,7 @@ PyResult StationSvc::Handle_GetStation(PyCallArgs &call) {
 
 //This is called when opening up the sov dashboard
 PyResult StationSvc::Handle_GetAllianceSystems(PyCallArgs &call) {
-  sLog.White( "StationSvc::Handle_GetAllianceSystems()", "size=%li", call.tuple->size());
+  sLog.White( "StationSvc::Handle_GetAllianceSystems()", "size=%lu", call.tuple->size());
     call.Dump(SERVICE__CALL_DUMP);
 
     return svDataMgr.GetAllianceSystems();
@@ -96,7 +95,7 @@ PyResult StationSvc::Handle_GetAllianceSystems(PyCallArgs &call) {
 
 //This call is made by client when player opens 'Settled Systems' dropdown in alliance details ui
 PyResult StationSvc::Handle_GetSystemsForAlliance(PyCallArgs &call) {
-  sLog.White( "StationSvc::Handle_GetSystemsForAlliance()", "size=%li", call.tuple->size());
+  sLog.White( "StationSvc::Handle_GetSystemsForAlliance()", "size=%lu", call.tuple->size());
     call.Dump(SERVICE__CALL_DUMP);
     return nullptr;
 }

@@ -18,10 +18,12 @@
 #include "alliance/AllianceData.h"
 #include "packets/CorporationPkts.h"
 
+
+struct OfficeData;
+
 class Client;
 class PyRep;
 class PyObject;
-class OfficeData;
 
 class AllianceDB
 {
@@ -37,7 +39,7 @@ public:
     static void EditBulletin(uint32 bulletinID, uint32 eCharID, int64 eDataTime, std::string& title, std::string& body);
     static void DeleteBulletin(uint32 bulletinID);
 
-    PyRep *GetMyApplications(uint32 allyID);
+    static PyRep *GetMyApplications(uint32 allyID);
     PyRep *GetApplications(uint32 allyID);
 
     PyRep *GetAlliance(uint32 allyID);

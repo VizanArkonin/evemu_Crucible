@@ -40,17 +40,16 @@
 SpawnMgr::SpawnMgr(SystemManager* mgr, PyServiceMgr& svc)
 : m_system(mgr),
   m_services(svc),
+  m_dungMgr(nullptr),
   m_ratTimer(0),
   m_ratGroupTimer(0),
   m_missionTimer(0),
   m_incursionTimer(0),
-  m_deadspaceTimer(0)
+  m_deadspaceTimer(0),
+  m_groupTimerSetTime(0),
+  m_spawnID(1),
+  m_initalized(false)
 {
-    m_spawnID = 1;
-
-    m_ratEnabled = false;
-    m_initalized = false;
-
     m_spawns.clear();
     m_bubbles.clear();
     m_toSpawn.clear();
@@ -61,23 +60,20 @@ SpawnMgr::SpawnMgr(SystemManager* mgr, PyServiceMgr& svc)
 
 bool SpawnMgr::Init()
 {
-    // even if belt spawns arent activated, still allow anomaly spawnining
+    // even if belt spawns arent activated, still allow anomaly/dungeon spawning
     m_initalized = true;
 
-    if (!sConfig.npc.RoamingSpawns and !sConfig.npc.StaticSpawns) {
-        _log(COSMIC_MGR__MESSAGE, "Belt Spawns Disabled while Initializing SpawnMgr for %s(%u) - config option off.", m_system->GetName(), m_system->GetID());
-        return true;
-    }
-
     if (m_system->BeltCount() < 1) {
-        _log(COSMIC_MGR__MESSAGE, "Belt Spawns Disabled while Initializing SpawnMgr for %s(%u) - no belts.", m_system->GetName(), m_system->GetID());
+        _log(COSMIC_MGR__INIT, "Belt Spawns Disabled for %s(%u) - no belts.", m_system->GetName(), m_system->GetID());
         return true;
     }
 
-    m_ratEnabled = true;
     m_groupTimerSetTime = 150;  // (in seconds) 2.5m default check time. this will allow a max wait time of 7.5m for respawn
 
-    _log(COSMIC_MGR__MESSAGE, "SpawnMgr Fully Initialized for %s(%u)", m_system->GetName(), m_system->GetID());
+    _log(COSMIC_MGR__INIT, "SpawnMgr Initialized for %s(%u)", m_system->GetName(), m_system->GetID());
+    _log(COSMIC_MGR__INIT, "Roaming Belt Spawns are %s", sConfig.npc.RoamingSpawns ? "enabled" : "disabled");
+    _log(COSMIC_MGR__INIT, "Static Gate Spawns are %s", sConfig.npc.StaticSpawns ? "enabled" : "disabled");
+
     return m_initalized;
 }
 
@@ -85,15 +81,13 @@ bool SpawnMgr::Init()
 void SpawnMgr::Process() {
     if (!m_initalized)
         return;
-    if (!m_ratEnabled)
-        return;
 
-    double profileStartTime = GetTimeUSeconds();
+    double profileStartTime(GetTimeUSeconds());
     // called by SystemManager::Process() for each system.  this will need to be fast.
-    //  check timers and call approprate functions as needed.
+    //  check timers and call appropriate functions as needed.
 
     // will have to think about this one a bit to implement properly (and quickly)
-    /*  current implentation uses a single timer for entire system
+    /*  current implementation uses a single timer for entire system
 	 * timer goes off, do the following...
 	 *   loop thru all spawned bubbles in system
 	 *   spawn rats as needed to fill spawn groups
@@ -343,11 +337,19 @@ void SpawnMgr::DoSpawnForMission(SystemBubble* pBubble, uint32 regionID)
 
 bool SpawnMgr::DoSpawnForBubble(SystemBubble* pBubble)
 {
-    if (!m_ratEnabled)
-        return false;
     if (pBubble == nullptr)
         return false;
-    double profileStartTime = GetTimeUSeconds();
+
+    if (pBubble->IsBelt()) {
+        if (!sConfig.cosmic.BeltEnabled)
+            return false;
+        if (!sConfig.npc.RoamingSpawns)
+            return false;
+    }
+
+    if (pBubble->IsGate())
+        if (!sConfig.npc.StaticSpawns)
+            return false;
 
     if (FindSpawnForBubble(pBubble->GetID())) {
         _log(SPAWN__TRACE, "SpawnMgr::FindSpawnForBubble() returned true for bubble %u.", pBubble->GetID());
@@ -367,9 +369,6 @@ bool SpawnMgr::DoSpawnForBubble(SystemBubble* pBubble)
     if (pBubble->IsGate())
         m_system->IncGateSpawnCount();
 
-    /* this will throw off the accuracy of the profile, as this and SpawnMgr::Process() use the same data container */
-    if (sConfig.debug.UseProfiling)
-        sProfiler.AddTime(Profile::spawn, GetTimeUSeconds() - profileStartTime);
     return true;
 }
 
@@ -830,7 +829,7 @@ bool SpawnMgr::IsChaining(uint16 bubbleID)
     auto range = m_spawns.equal_range(bubbleID);
     auto itr = range.first;
     while (itr != range.second) {
-        if (itr->second.enabled);
+        if (itr->second.enabled)
             rsp = true;
         ++itr;
     }

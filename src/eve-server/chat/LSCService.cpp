@@ -172,7 +172,7 @@ PyResult LSCService::Handle_GetChannels(PyCallArgs &call)
 
 PyResult LSCService::Handle_GetRookieHelpChannel(PyCallArgs &call) {
     if (is_log_enabled(LSC__CALL_DUMP)) {
-        sLog.Warning("LSCService::Handle_GetRookieHelpChannel()", "size=%li", call.tuple->size());
+        sLog.Warning("LSCService::Handle_GetRookieHelpChannel()", "size=%lu", call.tuple->size());
         call.Dump(LSC__CALL_DUMP);
     }
 
@@ -182,7 +182,7 @@ PyResult LSCService::Handle_GetRookieHelpChannel(PyCallArgs &call) {
 PyResult LSCService::Handle_CreateChannel(PyCallArgs& call)
 {
     if (is_log_enabled(LSC__CALL_DUMP)) {
-        sLog.Warning("LSCService::Handle_CreateChannel()", "size=%li", call.tuple->size());
+        sLog.Warning("LSCService::Handle_CreateChannel()", "size=%lu", call.tuple->size());
         call.Dump(LSC__CALL_DUMP);
     }
 
@@ -281,7 +281,7 @@ PyResult LSCService::Handle_CreateChannel(PyCallArgs& call)
 
 PyResult LSCService::Handle_JoinChannels(PyCallArgs &call) {
     if (is_log_enabled(LSC__CALL_DUMP)) {
-        sLog.Warning("LSCService::Handle_JoinChannels()", "size=%li", call.tuple->size());
+        sLog.Warning("LSCService::Handle_JoinChannels()", "size=%lu", call.tuple->size());
         call.Dump(LSC__CALL_DUMP);
     }
 
@@ -375,7 +375,7 @@ PyResult LSCService::Handle_JoinChannels(PyCallArgs &call) {
 PyResult LSCService::Handle_SendMessage(PyCallArgs& call)
 {
     if (is_log_enabled(LSC__CALL_DUMP)) {
-        sLog.Warning("LSCService::Handle_SendMessage()", "size=%li", call.tuple->size());
+        sLog.Warning("LSCService::Handle_SendMessage()", "size=%lu", call.tuple->size());
         call.Dump(LSC__CALL_DUMP);
     }
 
@@ -429,7 +429,7 @@ PyResult LSCService::Handle_SendMessage(PyCallArgs& call)
 PyResult LSCService::Handle_AccessControl(PyCallArgs& call)
 {
     if (is_log_enabled(LSC__CALL_DUMP)) {
-        sLog.Warning("LSCService::Handle_AccessControl()", "size=%li", call.tuple->size());
+        sLog.Warning("LSCService::Handle_AccessControl()", "size=%lu", call.tuple->size());
         call.Dump(LSC__CALL_DUMP);
     }
     /*  args passed as channelID, charID, mode
@@ -481,7 +481,7 @@ PyResult LSCService::Handle_AccessControl(PyCallArgs& call)
 PyResult LSCService::Handle_Invite(PyCallArgs &call)
 {
     if (is_log_enabled(LSC__CALL_DUMP)) {
-        sLog.Warning("LSCService::Handle_Invite()", "size=%li", call.tuple->size());
+        sLog.Warning("LSCService::Handle_Invite()", "size=%lu", call.tuple->size());
         call.Dump(LSC__CALL_DUMP);
     }
 
@@ -570,7 +570,7 @@ PyResult LSCService::Handle_Invite(PyCallArgs &call)
 PyResult LSCService::Handle_Configure(PyCallArgs& call)
 {
     if (is_log_enabled(LSC__CALL_DUMP)) {
-        sLog.Warning("LSCService::Handle_Configure()", "size=%li", call.tuple->size());
+        sLog.Warning("LSCService::Handle_Configure()", "size=%lu", call.tuple->size());
         call.Dump(LSC__CALL_DUMP);
     }
     /*
@@ -698,7 +698,7 @@ PyResult LSCService::Handle_Configure(PyCallArgs& call)
 
 PyResult LSCService::Handle_LeaveChannel(PyCallArgs &call) {
     if (is_log_enabled(LSC__CALL_DUMP)) {
-        sLog.Warning("LSCService::Handle_LeaveChannel()", "size=%li", call.tuple->size());
+        sLog.Warning("LSCService::Handle_LeaveChannel()", "size=%lu", call.tuple->size());
         call.Dump(LSC__CALL_DUMP);
     }
 
@@ -754,7 +754,7 @@ PyResult LSCService::Handle_LeaveChannel(PyCallArgs &call) {
 
 PyResult LSCService::Handle_LeaveChannels(PyCallArgs &call) {
     if (is_log_enabled(LSC__CALL_DUMP)) {
-        sLog.Warning("LSCService::Handle_LeaveChannels()", "size=%li", call.tuple->size());
+        sLog.Warning("LSCService::Handle_LeaveChannels()", "size=%lu", call.tuple->size());
         call.Dump(LSC__CALL_DUMP);
     }
 
@@ -824,7 +824,7 @@ PyResult LSCService::Handle_LeaveChannels(PyCallArgs &call) {
 PyResult LSCService::Handle_DestroyChannel(PyCallArgs& call)
 {
     if (is_log_enabled(LSC__CALL_DUMP)) {
-        sLog.Warning("LSCService::Handle_DestroyChannel()", "size=%li", call.tuple->size());
+        sLog.Warning("LSCService::Handle_DestroyChannel()", "size=%lu", call.tuple->size());
         call.Dump(LSC__CALL_DUMP);
     }
 
@@ -1224,7 +1224,7 @@ void LSCService::SendMail(uint32 sender, const std::vector<int32> &recipients, c
 
     for(; cur != end; cur++) {
         uint32 messageID = m_db->StoreMail(sender, *cur, subject.c_str(), content.c_str(), notify.sentTime);
-        if(messageID == 0) {
+        if (messageID == 0) {
             _log(SERVICE__ERROR, "Failed to store message from %u for recipient %u", sender, *cur);
             continue;
         }
@@ -1286,7 +1286,7 @@ PyResult LSCService::Handle_DeleteMessages(PyCallArgs &call) {
         return nullptr;
     }
 
-    if(args.channelID != (int32)call.client->GetCharacterID()) {
+    if (args.channelID != (int32)call.client->GetCharacterID()) {
         _log(SERVICE__ERROR, "%s (%d) tried to delete messages in channel %u. Denied.", call.client->GetName(), call.client->GetCharacterID(), args.channelID);
         return nullptr;
     }

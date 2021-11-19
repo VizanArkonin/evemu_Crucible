@@ -6,6 +6,8 @@
   * @Author:        Allan
   * @date:          12 December 2015
   *
+  * Updates:        James
+  * Date:          13 November 2021
   */
 
 
@@ -15,7 +17,6 @@
 
 #include "ServiceDB.h"
 #include "utils/Singleton.h"
-#include "system/SystemGPoint.h"
 #include "system/cosmicMgrs/ManagerDB.h"
 
 /* this class will control all aspects of
@@ -36,12 +37,12 @@ public:
     void Initialize(PyServiceMgr* svc);
     void Process();
 
-    void Create(CosmicSignature& sig);
+    void Create(CosmicSignature& sig, uint32 exitSystemID=0, uint32 exitSourceItemID=0);
     // this will create a k162 and send data to anomalyMgr for inclusion
-    void CreateExit(SystemManager* pFromSys, SystemManager* pToSys);
+    void CreateExit(SystemManager* pFromSys, SystemManager* pToSys, uint32 sourceItemID);
+    void CreateExit(SystemManager* pFromSys, uint32 exitSystemID, uint32 sourceItemID);
 
 private:
-    SystemGPoint m_gp;
     ManagerDB* m_mdb;
     ServiceDB* m_sdb;
     PyServiceMgr* m_services;
@@ -50,10 +51,14 @@ private:
 
     bool m_initalized;
 
+    // Generic functions used when managing wormholes
+    const ItemType* GetRandomWormholeType(uint32 systemID);
+    uint32 GetRandomDestination(const ItemType* typeID);
+
     // as system matures, this will definitely need to be updated
     std::vector<uint32>         m_wormholes;   //exitID
-
 };
+
 
 //Singleton
 #define sWHMgr \

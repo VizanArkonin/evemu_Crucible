@@ -361,7 +361,7 @@ RefPtr<_Ty> InventoryItem::_LoadItem(uint32 itemID, const ItemType &type, const 
                     _log(ITEM__WARNING, "item %u (type %u, group %u,  cat %u) is not handled in II::_LoadItem::Entity.", itemID, type.id(), type.groupID(), type.categoryID());
                 }
             }
-        }
+        } break;
         default: {
             _log(ITEM__WARNING, "item %u (type %u, group %u,  cat %u) is not handled in II::_LoadItem.", itemID, type.id(), type.groupID(), type.categoryID());
         } break;
@@ -517,25 +517,7 @@ InventoryItemRef InventoryItem::Spawn(ItemData &data)
             return itemRef;
         } break;
         case EVEDB::invCategories::Station: {
-            if (iType->groupID() == EVEDB::invGroups::Station) {
-            uint32 itemID = StationItem::CreateItemID(data);
-            if (itemID == 0)
-                return StationItemRef(nullptr);
-            StationItemRef stationRef = StationItem::Load(itemID);
-            if (stationRef.get() == nullptr)
-                return StationItemRef(nullptr);
-            // THESE SHOULD BE MOVED INTO A Station::Spawn() function that does not exist yet
-            stationRef->SetAttribute(AttrShieldCharge,  stationRef->GetAttribute(AttrShieldCapacity), false);     // Shield Charge
-            stationRef->SetAttribute(AttrArmorDamage,   EvilZero, false);                                         // Armor Damage
-            stationRef->SetAttribute(AttrMass,          iType->mass(), false);           // Mass
-            stationRef->SetAttribute(AttrRadius,        iType->radius(), false);       // Radius
-            stationRef->SetAttribute(AttrVolume,        iType->volume(), false);       // Volume
-            stationRef->SetAttribute(AttrCapacity,      iType->capacity(), false);   // Capacity
-            return stationRef;
-            } else if (iType->groupID() == EVEDB::invGroups::Station_Services) {
-                // this should never hit...throw error
-                codelog(INV__ERROR, "II::Spawn called for unhandled item type %u, cat %u in locID: %u.", iType->id(), iType->categoryID(), data.locationID);
-            }
+            return StationItem::Spawn(data);
         } break;
         case EVEDB::invCategories::Celestial: {
             if ((iType->groupID() == EVEDB::invGroups::Secure_Cargo_Container)
@@ -587,7 +569,7 @@ void InventoryItem::Delete()
     } else {
         // remove from current container's inventory
         if (IsValidLocationID(m_data.locationID)) {
-            InventoryItemRef iRef = sItemFactory.GetItem(m_data.locationID);
+            InventoryItemRef iRef = sItemFactory.GetItemRef(m_data.locationID);
             if (iRef.get() != nullptr) {
                 iRef->GetMyInventory()->RemoveItem(InventoryItemRef(this));
             } else {
@@ -604,7 +586,7 @@ void InventoryItem::Delete()
 
 void InventoryItem::ToVirtual(uint32 locationID)
 {
-    InventoryItemRef iRef = sItemFactory.GetItemContainer(m_itemID, false);
+    InventoryItemRef iRef = sItemFactory.GetItemContainerRef(m_itemID, false);
     if (iRef.get() != nullptr) {
         // verify this gets inventory containing item before trying to manipulate
         //Inventory* pInv = iRef->GetMyInventory();
@@ -688,7 +670,7 @@ void InventoryItem::Donate(uint32 new_owner/*ownerSystem*/, uint32 new_location/
         and (new_flag != m_data.flag))) {   //  but different flag
         // remove from current location
         if (IsValidLocationID(m_data.locationID)) {
-            iRef = sItemFactory.GetItem(m_data.locationID);
+            iRef = sItemFactory.GetItemRef(m_data.locationID);
             if (iRef.get() != nullptr) {
                 iRef->RemoveItem(InventoryItemRef(this));
             } else {
@@ -706,7 +688,7 @@ void InventoryItem::Donate(uint32 new_owner/*ownerSystem*/, uint32 new_location/
     or ((old_location == m_data.locationID) // or same container
         and (old_flag != m_data.flag))) {   //  but different flag
         // add to new location
-        iRef = sItemFactory.GetItem(m_data.locationID);
+        iRef = sItemFactory.GetItemRef(m_data.locationID);
         if (iRef.get() != nullptr) {
             iRef->AddItem(InventoryItemRef(this));
         } else {
@@ -752,13 +734,17 @@ void InventoryItem::Move(uint32 new_location/*locTemp*/, EVEItemFlags new_flag/*
         and (new_flag != m_data.flag))) {   //  but different flag
         // remove from current location
         if (IsValidLocationID(m_data.locationID)) {
-            iRef = sItemFactory.GetItem(m_data.locationID);
+            iRef = sItemFactory.GetItemRef(m_data.locationID);
             if (iRef.get() != nullptr) {
                 iRef->RemoveItem(InventoryItemRef(this));
             } else {
                 _log(ITEM__ERROR, "II::Move() - Cant find location %u containing %s.", m_data.locationID, m_data.name.c_str());
             }
+        } else {
+            _log(ITEM__WARNING, "II::Move()::Remove() - %u is invalid location.", m_data.locationID);
         }
+    } else {
+        _log(ITEM__TRACE, "II::Move()::Remove() - same same same.");
     }
 
     // update data
@@ -770,13 +756,17 @@ void InventoryItem::Move(uint32 new_location/*locTemp*/, EVEItemFlags new_flag/*
         and (old_flag != m_data.flag))) {   //  but different flag
         // add to new location
         if (IsValidLocationID(m_data.locationID)) {
-            iRef = sItemFactory.GetItem(m_data.locationID);
+            iRef = sItemFactory.GetItemRef(m_data.locationID);
             if (iRef.get() != nullptr) {
                 iRef->AddItem(InventoryItemRef(this));
             } else {
                 _log(ITEM__ERROR, "II::Move() - Cant find location %u to add %s.", m_data.locationID, m_data.name.c_str());
             }
+        } else {
+            _log(ITEM__WARNING, "II::Move()::Add() - %u is invalid location.", m_data.locationID);
         }
+    } else {
+        _log(ITEM__TRACE, "II::Move()::Add() - same same same.");
     }
 
     if (IsTempItem(m_itemID) or IsNPC(m_itemID))
@@ -835,7 +825,7 @@ void InventoryItem::Relocate(uint32 locID, EVEItemFlags flag) {
         and (old_flag != m_data.flag))) {   //  but different flag
         // add to new location
         if (IsValidLocationID(m_data.locationID)) {
-            iRef = sItemFactory.GetItem(m_data.locationID);
+            iRef = sItemFactory.GetItemRef(m_data.locationID);
             if (iRef.get() != nullptr) {
                 iRef->AddItem(InventoryItemRef(this));
             } else {
@@ -950,6 +940,7 @@ bool InventoryItem::SetQuantity(int32 qty, bool notify/*false*/, bool deleteOnZe
     int32 old_qty = m_data.quantity;
     m_data.quantity = qty;
 
+    /* this isnt needed.  quantity has hard limit.
     if (m_data.quantity > maxEveItem) {
         codelog(ITEM__ERROR, "II::SetQuantity() - %s(%u): quantity overflow", m_data.name.c_str(), m_itemID);
         m_data.quantity = maxEveItem -1;
@@ -958,7 +949,7 @@ bool InventoryItem::SetQuantity(int32 qty, bool notify/*false*/, bool deleteOnZe
             if (pClient != nullptr)
                 pClient->SendInfoModalMsg("Your %s has reached quantity limits of this server.<br>If you try to add any more to this stack, you will lose items.  This is your only warning.", m_data.name.c_str());
         }
-    }
+    } */
 
     if (notify or (IsCargoHoldFlag(m_data.flag) and (m_type.categoryID() == EVEDB::invCategories::Charge))) {
         std::map<int32, PyRep *> changes;
@@ -1007,14 +998,14 @@ bool InventoryItem::ChangeSingleton(bool singleton, bool notify/*false*/) {
     if (singleton == m_data.singleton)
         return true;    //nothing to do...
 
-    bool old_singleton = m_data.singleton;
+    bool old_singleton(m_data.singleton);
     m_data.singleton = singleton;
 
     //verify quantity is -1 for singletons
     if (m_data.singleton)
         if (m_data.quantity > 1) {
-            _log(ITEM__WARNING, "%s(%u) is changing singleton to %s and qty is currently %u", \
-                    m_data.name.c_str(), m_itemID, singleton?"On":"Off");
+            _log(ITEM__WARNING, "%s(%u) is changing singleton to %s and qty is currently %i", \
+                    m_data.name.c_str(), m_itemID, singleton?"On":"Off", m_data.quantity);
             m_data.quantity = -1;
         }
 
@@ -1172,7 +1163,7 @@ void InventoryItem::GetItemRow(PyPackedRow* into) const
 {
     int32 qty = (m_data.singleton ? -1 : m_data.quantity);
     if (m_type.categoryID() == EVEDB::invCategories::Blueprint)
-        if (sItemFactory.GetBlueprint(m_itemID)->copy())
+        if (sItemFactory.GetBlueprintRef(m_itemID)->copy())
             qty = -2;
 
     into->SetField("itemID",       new PyLong(m_itemID));
@@ -1185,7 +1176,7 @@ void InventoryItem::GetItemRow(PyPackedRow* into) const
     into->SetField("quantity",     new PyInt(qty));
     /*
     if (m_type.categoryID() == EVEDB::invCategories::Blueprint) {
-        if (sItemFactory.GetBlueprint(m_itemID)->copy()) {
+        if (sItemFactory.GetBlueprintRef(m_itemID)->copy()) {
             into->SetField("stacksize",    new PyInt(1));
             into->SetField("singleton",    new PyInt(2));
         } else {
@@ -1464,6 +1455,12 @@ bool InventoryItem::SkillCheck(InventoryItemRef refItem)
 void InventoryItem::AddModifier(fxData &data)
 {
     m_modifiers.emplace(data.math, data);
+    if (is_log_enabled(EFFECTS__TRACE))
+        _log(EFFECTS__TRACE, "II::AddModifier(): %s(%u) Added to map - <%s>, fxSrc:%s:%s(%u), targ:%s:%s(%u).", \
+            m_data.name.c_str(), m_itemID, sFxProc.GetMathMethodName(data.math), \
+            sFxProc.GetSourceName(data.fxSrc), sDataMgr.GetAttrName(data.srcAttr), data.srcAttr, \
+            sFxProc.GetTargLocName(data.targLoc), sDataMgr.GetAttrName(data.targAttr), data.targAttr);
+    // grpID, typeID, srcRef
 }
 
 void InventoryItem::RemoveModifier(fxData &data)
@@ -1480,6 +1477,12 @@ void InventoryItem::RemoveModifier(fxData &data)
         case FX::Math::PostAssignment: data.math = FX::Math::PreAssignment;   break;
     }
     m_modifiers.emplace(data.math, data);
+    if (is_log_enabled(EFFECTS__TRACE))
+        _log(EFFECTS__TRACE, "II::RemoveModifier(): %s(%u) Removed from map - <%s>, fxSrc:%s:%s(%u), targ:%s:%s(%u).", \
+        m_data.name.c_str(), m_itemID, sFxProc.GetMathMethodName(data.math), \
+        sFxProc.GetSourceName(data.fxSrc), sDataMgr.GetAttrName(data.srcAttr), data.srcAttr, \
+        sFxProc.GetTargLocName(data.targLoc), sDataMgr.GetAttrName(data.targAttr), data.targAttr);
+    // grpID, typeID, srcRef
 }
 
 void InventoryItem::ClearModifiers()

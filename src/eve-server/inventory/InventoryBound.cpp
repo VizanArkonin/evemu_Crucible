@@ -25,6 +25,7 @@
 */
 
 #include "eve-server.h"
+#include "../../eve-common/EVE_Station.h"
 
 #include "PyServiceCD.h"
 #include "EVEServerConfig.h"
@@ -38,6 +39,10 @@
 #include "system/BookmarkDB.h"
 #include "system/Container.h"
 #include "system/SystemManager.h"
+#include "system/SystemEntity.h"
+#include "station/Station.h"
+#include "station/Outpost.h"
+#include "station/StationDataMgr.h"
 #include "manufacturing/FactoryDB.h"
 
 PyCallable_Make_InnerDispatcher(InventoryBound)
@@ -101,7 +106,7 @@ PyResult InventoryBound::Handle_DestroyFitting(PyCallArgs &call) {
         codelog(SERVICE__ERROR, "%s: Failed to decode arguments.", GetName());
     }
 
-    call.client->GetShip()->RemoveRig(sItemFactory.GetItem(args.arg));
+    call.client->GetShip()->RemoveRig(sItemFactory.GetItemRef(args.arg));
 
     return nullptr;
 }
@@ -247,13 +252,13 @@ PyResult InventoryBound::Handle_MultiMerge(PyCallArgs &call) {
             continue;
         }
 
-        InventoryItemRef srcItem = sItemFactory.GetItem( data.sourceID );
+        InventoryItemRef srcItem = sItemFactory.GetItemRef( data.sourceID );
         if (srcItem.get() == nullptr) {
             _log(INV__WARNING, "Failed to load source item %u. Skipping.", data.sourceID);
             continue;
         }
 
-        InventoryItemRef destItem = sItemFactory.GetItem( data.destID );
+        InventoryItemRef destItem = sItemFactory.GetItemRef( data.destID );
         if (destItem.get() == nullptr) {
             _log(INV__WARNING, "Failed to load destination item %u. Skipping.", data.destID);
             continue;
@@ -287,7 +292,7 @@ PyResult InventoryBound::Handle_Add(PyCallArgs &call) {
     }
 
     if (call.tuple->items.size() != 2) {
-        _log(INV__ERROR, "IB::Handle_Add()  Unexpected number of elements in tuple: %u (should be 2).", call.tuple->items.size() );
+        _log(INV__ERROR, "IB::Handle_Add()  Unexpected number of elements in tuple: %lu (should be 2).", call.tuple->items.size() );
         return nullptr;
     }
 
@@ -302,12 +307,12 @@ PyResult InventoryBound::Handle_Add(PyCallArgs &call) {
         toFlag = PyRep::IntegerValueU32(call.byname.find("flag")->second);
     if (toFlag == flagLocked) {
         // corp role 'equip config' can move locked items (per client)
-        _log(INV__ERROR, "IB::Handle_Add() - item %u from %u sent flagLocked.  continuing but this needs to be fixed.", \
+        _log(INV__ERROR, "IB::Handle_Add() - item %i from %i sent flagLocked.  continuing but this needs to be fixed.", \
                 args.itemID, args.containerID);
         toFlag = flagCargoHold;
     }
 
-    InventoryItemRef iRef = sItemFactory.GetItem(args.itemID);
+    InventoryItemRef iRef = sItemFactory.GetItemRef(args.itemID);
 
     bool moveStack = false;
     int32 quantity = 0;
@@ -339,7 +344,7 @@ PyResult InventoryBound::Handle_Add(PyCallArgs &call) {
     if (quantity < 1)
         quantity = 1;
 
-    _log(INV__MESSAGE, "IB::Handle_Add() - moving %u %s(%u) from (%u:%s) to me(%s:%u:%s).", \
+    _log(INV__MESSAGE, "IB::Handle_Add() - moving %i %s(%i) from (%i:%s) to me(%s:%u:%s).", \
             quantity, iRef->name(), args.itemID, args.containerID, sDataMgr.GetFlagName(iRef->flag()),\
             m_self->name(), m_itemID, sDataMgr.GetFlagName(toFlag));
 
@@ -357,7 +362,7 @@ PyResult InventoryBound::Handle_MultiAdd(PyCallArgs &call) {
     }
 
     if (call.tuple->items.size() != 2) {
-        _log(INV__ERROR, "IB::Handle_MultiAdd()  Unexpected number of elements in tuple: %u (should be 2).", call.tuple->items.size() );
+        _log(INV__ERROR, "IB::Handle_MultiAdd()  Unexpected number of elements in tuple: %lu (should be 2).", call.tuple->items.size() );
         return nullptr;
     }
 
@@ -399,11 +404,11 @@ PyResult InventoryBound::Handle_MultiAdd(PyCallArgs &call) {
     if (m_self->IsShipItem() and !moveStack) {
         std::vector<InventoryItemRef> itemVec;
         for (auto cur : args.itemIDs)
-            itemVec.push_back(sItemFactory.GetItem(cur));
+            itemVec.push_back(sItemFactory.GetItemRef(cur));
         args.itemIDs = CatSortItems(itemVec);
     }
 
-    _log(INV__MESSAGE, "IB::Handle_MultiAdd() - moving %u items from (%u:%s) to me(%s:%u:%s).", \
+    _log(INV__MESSAGE, "IB::Handle_MultiAdd() - moving %lu items from (%i:%s) to me(%s:%u:%s).", \
                 args.itemIDs.size(), args.containerID, sDataMgr.GetFlagName(m_flag), m_self->name(), m_itemID, sDataMgr.GetFlagName(toFlag));
 
     return MoveItems( call.client, args.itemIDs, (EVEItemFlags)toFlag, quantity, moveStack, capacity);
@@ -516,7 +521,7 @@ PyRep* InventoryBound::MoveItems(Client* pClient, std::vector< int32 >& items, E
         toFlag = origFlag;
         quantity = origQty;
 
-        iRef = sItemFactory.GetItem(*itr);
+        iRef = sItemFactory.GetItemRef(*itr);
         if (iRef.get() == nullptr) {
             _log(INV__ERROR, "IB::MoveItems() - item %i not found.  continuing.", (*itr));
             continue;
@@ -632,7 +637,7 @@ PyRep* InventoryBound::MoveItems(Client* pClient, std::vector< int32 >& items, E
             // check adding item to ship...if it fails, return to previous container
             if (m_self->GetShipItem()->AddItemByFlag(toFlag, iRef, pClient) < 1) {
                 //ALL items *should* have a loaded container item.
-                InventoryItemRef contRef = sItemFactory.GetItemContainer(*itr);
+                InventoryItemRef contRef = sItemFactory.GetItemContainerRef(*itr);
                 if (contRef.get() != nullptr) {
                     contRef->AddItem(iRef);
                 } else {
@@ -706,7 +711,7 @@ std::vector< int32 > InventoryBound::CatSortItems(std::vector< InventoryItemRef 
         items.push_back(cur->itemID());
 
     if (sConfig.debug.IsTestServer and sConfig.debug.UseProfiling)
-        sLog.Warning("IB::CatSortItems", "%u items sorted in %.3fus with %u loops.", items.size(), (GetTimeUSeconds() - start), count);
+        sLog.Warning("IB::CatSortItems", "%lu items sorted in %.3fus with %u loops.", items.size(), (GetTimeUSeconds() - start), count);
 
     return items;  //returns sorted list
 }
@@ -911,21 +916,34 @@ PyResult InventoryBound::Handle_Build(PyCallArgs &call) {
     _log(POS__MESSAGE, "%s Calling InventoryBound::Build() for %s(%u)", call.client->GetName(), m_self->name(), m_itemID);
     call.Dump(POS__DUMP);
 
-    /* 
-    Actions to be implemented
+    /*
+    Outpost construction process:
     1. Ensure all required items are in the egg
     2. Initiate the destruction of the platform
     3. Initiate the building and registration of the new station
     */
 
     // Step 1
+    _log(POS__MESSAGE, "Checking construction requirements for %s(%u).", m_self->name(), m_itemID);
+
+    // Retrieve the SE object for the egg itself
+    SystemEntity* egg = call.client->SystemMgr()->GetEntityByID(m_itemID);
+
+    // Check if anchored, and if not return nullptr and error
+    if (egg->GetPOSSE()->GetState() != EVEPOS::StructureState::Anchored) {
+        call.client->SendNotifyMsg("This operation requires the construction platform to be anchored.");
+        return nullptr;
+    }
+
+    // Get required materials to construct the outpost
     DBQueryResult res;
+    DBResultRow row;
     uint32 stationType = m_self->GetAttribute(AttrStationTypeID).get_uint32();
     FactoryDB::GetOutpostMaterialCompositionOfItemType(stationType, res);
     std::vector<InventoryItemRef> platformItems;
+
     m_self->GetMyInventory()->GetItemsByFlag(flagNone, platformItems);
 
-    DBResultRow row;
     while (res.GetRow(row)) {
         uint32 requiredType = row.GetUInt(0);
         uint32 requiredQuantity = row.GetUInt(1);
@@ -943,6 +961,123 @@ PyResult InventoryBound::Handle_Build(PyCallArgs &call) {
             return nullptr;
         }
     }
+
+    // Step 2
+    _log(POS__MESSAGE, "Removing entity %s(%u) from space safely.", m_self->name(), m_itemID);
+
+    // Save the anchor position and planet radius since we'll need it when setting up the new station
+    GPoint anchorPosition = egg->GetPosition();
+
+    // Clear egg's data and remove it from space
+    call.client->SystemMgr()->RemoveEntity(egg);
+    m_self->ChangeOwner(0, true);
+    SafeDelete(egg);
+
+    // Step 3
+    _log(POS__MESSAGE, "Creating new OutpostSE entity...");
+
+    // Create the item data which we use to create the StationItemRef
+    StationData stData = StationData();
+
+    // Calculate stationID
+    stData.stationID = StationDB::GetNewOutpostID();
+
+    // Get base station data
+    StationDB::GetStationBaseData(res, stationType);
+    std::string stationBaseName;
+    while (res.GetRow(row)) {
+        stData.dockOrientation = GVector(row.GetDouble(0),row.GetDouble(1),row.GetDouble(2));
+        stData.conquerable = row.GetBool(3);
+        stData.hangarGraphicID = row.GetUInt(4);
+        stData.description = row.GetText(5);
+        stData.descriptionID = row.GetInt(6);
+        stData.graphicID = row.GetInt(7);
+        stData.dockEntry = GPoint(row.GetDouble(8),row.GetDouble(9),row.GetDouble(10));
+        stData.operationID = row.GetUInt(11);
+        stData.dockPosition = GPoint (row.GetDouble(8) + anchorPosition.x,
+                                      row.GetDouble(9) + anchorPosition.y,
+                                      row.GetDouble(10) + anchorPosition.z);
+        stationBaseName = row.GetText(12);
+    }
+
+    // Get radius from StationType object
+    StationType* stType = StationType::Load(stationType);
+    stData.radius = stType->radius();
+
+    // Location data
+    stData.systemID = call.client->GetSystemID();
+    stData.constellationID = call.client->GetConstellationID();
+    stData.regionID = call.client->GetRegionID();
+    stData.position = anchorPosition;
+    stData.security = call.client->SystemMgr()->GetSecValue();
+
+    // Other station data
+    stData.typeID = stationType;
+    stData.reprocessingHangarFlag = flagHangar;
+    stData.corporationID = call.client->GetCorporationID();
+
+    // Build station name
+    stData.name = call.client->SystemMgr()->GetClosestPlanetSE(anchorPosition)->GetName()
+        + std::string(" - ") + stationBaseName;
+
+    // Set default configurable values
+    stData.officeRentalFee = 10000;
+    stData.maxShipVolumeDockable = 50000000;
+    stData.dockingCostPerVolume = 0;
+
+    // Set default service values
+    stData.officeSlots = 8;
+    stData.reprocessingEfficiency = 0.5;
+    stData.reprocessingStationsTake = 0.05;
+
+    // Set space values
+    stData.orbitID = call.client->SystemMgr()->GetClosestPlanetID(anchorPosition);
+
+    // Calculate service mask (temporarily, allow everything)
+    stData.serviceMask = Station::ReprocessingPlant                        
+                       | Station::Refinery
+                       | Station::Market
+                       | Station::BlackMarket
+                       | Station::StockExchange
+                       | Station::Cloning
+                       | Station::Surgery
+                       | Station::DNATherapy
+                       | Station::RepairFacilities
+                       | Station::Factory
+                       | Station::Laboratory
+                       | Station::Gambling
+                       | Station::Fitting
+                       | Station::Paintshop
+                       | Station::News
+                       | Station::Storage
+                       | Station::Insurance
+                       | Station::Docking
+                       | Station::OfficeRental
+                       | Station::JumpCloneFacility
+                       | Station::LoyaltyPointStore
+                       | Station::NavyOffices;
+
+    // Add the new outpost to the stationDataMgr and the DB
+    stDataMgr.AddOutpost(stData);
+
+    // Update staticDataMgr
+    sDataMgr.AddOutpost(stData);
+
+    // Create the StationItem and spawn the OutpostSE entity
+    StationItemRef itemRef = sItemFactory.GetStationRef(stData.stationID);
+    OutpostSE* oSE = new OutpostSE(itemRef, call.client->services(), call.client->SystemMgr());
+    sEntityList.AddStation(stData.stationID, itemRef);
+    call.client->SystemMgr()->AddEntity(oSE);
+
+    // Create and spawn all of the station service entities
+    _log(POS__MESSAGE, "Creating new station service entities...");
+
+    oSE->SpawnStationService(call.client, stData, EVEDB::invTypes::FittingService);
+    oSE->SpawnStationService(call.client, stData, EVEDB::invTypes::ReprocessingService);
+    oSE->SpawnStationService(call.client, stData, EVEDB::invTypes::FactoryService);
+    oSE->SpawnStationService(call.client, stData, EVEDB::invTypes::CloningService);
+    oSE->SpawnStationService(call.client, stData, EVEDB::invTypes::RepairService);
+    oSE->SpawnStationService(call.client, stData, EVEDB::invTypes::LaboratoryService);
 
     return nullptr;
 }

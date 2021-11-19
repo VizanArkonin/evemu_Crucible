@@ -24,9 +24,11 @@
 #include "EVEServerConfig.h"
 #include "StaticDataMgr.h"
 #include "manufacturing/Blueprint.h"
+#include "map/MapDB.h"
+#include "math/Trig.h"
 #include "planet/Moon.h"
 #include "planet/Planet.h"
-#include <planet/CustomsOffice.h>
+#include "planet/CustomsOffice.h"
 #include "pos/Tower.h"
 #include "pos/sovStructures/TCU.h"
 #include "pos/sovStructures/SBU.h"
@@ -178,7 +180,7 @@ void StructureItem::RemoveItem(InventoryItemRef iRef)
 
 void StructureItem::Rename(std::string name)
 {
-    if (mySE->GetPOSSE()->GetState() > EVEPOS::EntityState::Unanchored)
+    if (mySE->GetPOSSE()->GetState() > EVEPOS::StructureState::Unanchored)
     {
         InventoryItem::Rename(name);
         mySE->GetPOSSE()->SendSlimUpdate();
@@ -212,7 +214,6 @@ StructureSE::StructureSE(StructureItemRef structure, PyServiceMgr &services, Sys
     m_platform(false),
     m_loaded(false),
     m_module(false),
-    m_outpost(false),
     m_reactor(false),
     m_duration(0),
     m_anchorPointID(0),
@@ -622,7 +623,7 @@ void StructureSE::SetAnchor(Client *pClient, GPoint &pos)
     // Check for required sovereignty upgrades for certain structures
     if ((m_generator) || (m_jammer) || (m_bridge)) {
         SovereigntyData sovData = svDataMgr.GetSovereigntyData(pClient->GetLocationID());
-        InventoryItemRef ihubRef = sItemFactory.GetItem(sovData.hubID);
+        InventoryItemRef ihubRef = sItemFactory.GetItemRef(sovData.hubID);
         uint32 upgType = m_self->GetAttribute(EveAttrEnum::AttranchoringRequiresSovUpgrade1).get_int();
 
         if (!ihubRef->GetMyInventory()->ContainsTypeQty(upgType,1)) {
@@ -655,12 +656,12 @@ void StructureSE::SetAnchor(Client *pClient, GPoint &pos)
         //warpToPoint -= (radius * 1.25);
 
         uint32 dist = /*BUBBLE_RADIUS_METERS + 10000*/ m_self->GetAttribute(AttrMoonAnchorDistance).get_uint32();
-        uint32 radius = m_moonSE->GetRadius();
-        float rad = EvE::Trig::Deg2Rad(90);
+        uint32 radius(m_moonSE->GetRadius());
+        float rad(EvE::Trig::Deg2Rad(90));
 
         pos = m_moonSE->GetPosition();
-        pos.x += radius + dist * std::sin(rad);
-        pos.z += radius + dist * std::cos(rad);
+        pos.x += ((radius + dist) * std::sin(rad));
+        pos.z += ((radius + dist) * std::cos(rad));
         m_destiny->SetPosition(pos);
         sBubbleMgr.Add(this);
 
@@ -1130,12 +1131,6 @@ PyDict *StructureSE::MakeSlimItem()
         slim->SetItemString("incapacitated", new PyInt(m_data.state == EVEPOS::StructureState::Incapacitated));
         slim->SetItemString("posDelayTime", new PyInt(m_delayTime));
     }
-    if (m_outpost)
-    {
-        slim->SetItemString("startTimestamp", new PyLong(m_data.timestamp));
-        slim->SetItemString("structureState", new PyInt(m_data.state));
-        slim->SetItemString("posDelayTime", new PyInt(m_delayTime));
-    }
     else if (m_tcu)
     {
         slim->SetItemString("posDelayTime", new PyInt(m_delayTime));
@@ -1228,7 +1223,7 @@ void StructureSE::GetEffectState(PyList &into)
     into.AddItem(fxState);
 }
 
-void StructureSE::Killed(Damage &fatal_blow)
+void StructureSE::Killed(Damage &damage)
 {
     if ((m_bubble == nullptr) or (m_destiny == nullptr) or (m_system == nullptr))
         return; // make error here?
@@ -1238,7 +1233,7 @@ void StructureSE::Killed(Damage &fatal_blow)
 
     uint32 killerID = 0;
     Client *pClient(nullptr);
-    SystemEntity *killer = fatal_blow.srcSE;
+    SystemEntity *killer = damage.srcSE;
 
     if (killer->HasPilot())
     {
@@ -1303,7 +1298,7 @@ void StructureSE::Killed(Damage &fatal_blow)
     /* populate kill data for killMail and save to db  -allan 01May16  --updated 13July17 */
     /** @todo  check for tower/tcu/sbu/jammer and make killmail */
     /** @todo send pos mail/notification to corp members */
-    CharKillData data = CharKillData();
+    KillData data = KillData();
     data.solarSystemID = m_system->GetID();
     data.victimCharacterID = 0; // charID = 0 means strucuture/item
     data.victimCorporationID = m_corpID;
@@ -1316,9 +1311,9 @@ void StructureSE::Killed(Damage &fatal_blow)
     data.finalAllianceID = killer->GetAllianceID();
     data.finalFactionID = killer->GetWarFactionID();
     data.finalShipTypeID = killer->GetTypeID();
-    data.finalWeaponTypeID = fatal_blow.weaponRef->typeID();
+    data.finalWeaponTypeID = damage.weaponRef->typeID();
     data.finalSecurityStatus = 0; /* fix this */
-    data.finalDamageDone = fatal_blow.GetTotal();
+    data.finalDamageDone = damage.GetTotal();
 
     uint32 totalHP = m_self->GetAttribute(AttrHP).get_uint32();
     totalHP += m_self->GetAttribute(AttrArmorHP).get_uint32();
@@ -1372,6 +1367,11 @@ void StructureSE::Killed(Damage &fatal_blow)
         _log(PHYSICS__TRACE, "StructureSE::Killed() - Structure %s(%u) Position: %.2f,%.2f,%.2f.  Wreck %s(%u) Position: %.2f,%.2f,%.2f.",
              GetName(), GetID(), x(), y(), z(), wreckItemRef->name(), wreckItemRef->itemID(), wreckPosition.x, wreckPosition.y, wreckPosition.z);
 
+    DropLoot(wreckItemRef, m_self->groupID(), killerID);
+
+    for (auto cur : survivedItems)
+        cur->Move(wreckItemRef->itemID(), flagNone); // populate wreck with items that survived
+
     DBSystemDynamicEntity wreckEntity = DBSystemDynamicEntity();
     wreckEntity.allianceID = killer->GetAllianceID();
     wreckEntity.categoryID = EVEDB::invCategories::Celestial;
@@ -1391,11 +1391,6 @@ void StructureSE::Killed(Damage &fatal_blow)
         return;
     }
     m_destiny->SendJettisonPacket();
-
-    DropLoot(wreckItemRef, m_self->groupID(), killerID);
-
-    for (auto cur : survivedItems)
-        cur->Move(wreckItemRef->itemID(), flagNone); // populate wreck with items that survived
 }
 
 void StructureSE::Anchor()

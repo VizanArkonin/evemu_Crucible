@@ -116,7 +116,7 @@ struct BountyData {
 
 
 /* POD structure for character kill data  -allan 01May16 */
-struct CharKillData {
+struct KillData {
     uint16 victimShipTypeID;
     uint16 finalShipTypeID;
     uint16 finalWeaponTypeID;
@@ -238,15 +238,15 @@ struct RatSpawnClass { // notes for me while creating/writing/testing
 /* POD structure for loot groups */
 struct LootGroup {
     //uint32 groupID;
-    uint32 lootGroupID;
-    double dropChance;
+    uint16 lootGroupID;
+    float dropChance;
 };
 
 /* POD structure for loot types */
 struct LootGroupType {
     uint8 metaLevel;
-    uint32 lootGroupID;
-    uint32 typeID;
+    uint16 lootGroupID;
+    uint16 typeID;
     uint32 minQuantity;
     uint32 maxQuantity;
 };
@@ -255,7 +255,7 @@ struct LootGroupType {
 struct LootList {
     uint8 minDrop;
     uint8 maxDrop;
-    uint32 itemID;
+    uint16 itemID;
 };
 
 /* POD structure for statistic data */
@@ -286,6 +286,25 @@ struct SystemData {
     std::string securityClass;
 };
 
+/* POD structure for solarsystem. */
+struct SolarSystemData {
+    bool border;
+    bool fringe;
+    bool corridor;
+    bool hub;
+    bool international;
+    bool regional;
+    bool constellation;
+    uint32 factionID;
+    uint32 sunTypeID;
+    double security;
+    double radius;
+    double luminosity;
+    GPoint minPosition;
+    GPoint maxPosition;
+    std::string securityClass;
+};
+
 struct SystemKillData {
     uint16 killsHour;
     uint16 kills24Hour;
@@ -312,6 +331,16 @@ struct StaticData {
     float radius;
     GPoint position;
 };
+
+/* POD structure for attribute type data. */
+struct AttrTypeData {
+    uint8 categoryID;
+    uint8 attributeCategory;
+    uint16 attributeID;
+    std::string attributeName;
+    std::string displayName;
+};
+
 
 /* POD structure for sovereignty */
 struct SovereigntyData {
@@ -434,9 +463,6 @@ struct DBGPointEntity {
     uint8 idx;
     uint32 itemID;
     double radius;
-    double x;
-    double y;
-    double z;
     GPoint position;
 };
 

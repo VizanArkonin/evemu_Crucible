@@ -35,8 +35,10 @@ int StationDataMgr::Initialize()
 void StationDataMgr::Close()
 {
     /** @todo put a save method here which will save anything changed before shutdown */
-    for (auto cur : m_stationPyData)
-        PySafeDecRef(cur.second);
+    //for (auto cur : m_stationPyData)
+    //    PySafeDecRef(cur.second);
+
+    Clear();
 
     sLog.Warning("   StationDataMgr", "Station Data Manager has been closed." );
 }
@@ -51,7 +53,6 @@ void StationDataMgr::Clear()
     m_stationData.clear();
     m_stationPyData.clear();
     m_stationOfficeData.clear();
-
 }
 
 void StationDataMgr::Populate()
@@ -96,7 +97,8 @@ void StationDataMgr::Populate()
         t.graphicID, s.solarSystemID, s.constellationID, s.regionID, st.dockEntryX, st.dockEntryY, st.dockEntryZ 31
         StationData sData = StationData();
         sData.stationID                 = row.GetUInt(0);
-        if ((itr = m_serviceMask.find(sData.stationID)) != m_serviceMask.end()) {
+        sData.operationID               = row.GetInt(11);
+        if ((itr = m_serviceMask.find(sData.operationID)) != m_serviceMask.end()) {
             sData.serviceMask = itr->second;
         } else {
             sData.serviceMask = 0;
@@ -107,7 +109,6 @@ void StationDataMgr::Populate()
         sData.maxShipVolumeDockable     = row.GetUInt(8);
         sData.officeSlots               = row.GetUInt(9);
         sData.officeRentalFee           = row.GetInt(10);
-        sData.operationID               = row.GetInt(11);
         sData.typeID                    = row.GetInt(12);
         sData.corporationID             = row.GetInt(13);
         sData.name                      = row.GetText(14);
@@ -221,7 +222,7 @@ bool StationDataMgr::GetStationData(uint32 stationID, StationData& data)
     } else {
         _log(DATABASE__MESSAGE, "Failed to query data for station %u: Station not found.", stationID);
     }
-    return true;
+    return false;
 }
 
 PyObject* StationDataMgr::GetStationPyData(uint32 stationID)
@@ -287,7 +288,6 @@ uint32 StationDataMgr::GetOfficeRentalFee(uint32 stationID)
     return 0;
 }
 
-
 void StationDataMgr::LoadStationPyData()
 {
     for (auto cur : m_stationData) {
@@ -334,6 +334,19 @@ void StationDataMgr::LoadStationPyData()
 
         m_stationPyData.emplace(cur.first, new PyObject("util.KeyVal", dict));
     }
+}
+
+// Add an outpost to the datamgr and the db
+void StationDataMgr::AddOutpost(StationData &data) {
+    //Add the new data to the db
+    StationDB::CreateOutpost(data);
+
+    //Load the new data into the data manager
+    m_stationData.emplace(data.stationID, data);
+
+    //Reload all PyData from memory object
+    m_stationPyData.clear();
+    LoadStationPyData();
 }
 
 /** errata

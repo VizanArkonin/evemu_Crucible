@@ -1646,7 +1646,7 @@ PyResult CorpRegistryBound::Handle_UpdateApplicationOffer(PyCallArgs &call) {
             sEntityList.CorpNotify(ocmc.oldCorpID, Notify::Types::CorpNews, "OnCorporationMemberChanged", "corpid", ocmc.Encode());
 
         CorpData data = CorpData();
-            sItemFactory.db()->GetCorpData(args.charID, data);
+        CharacterDB::GetCharCorpData(args.charID, data);
             data.corpAccountKey = Account::KeyType::Cash;
             data.corpRole = Corp::Role::Member;
             data.rolesAtAll = Corp::Role::Member;
@@ -2622,10 +2622,7 @@ PyResult CorpRegistryBound::Handle_GetAllianceApplications(PyCallArgs &call) {
     _log(CORP__CALL, "CorpRegistryBound::Handle_GetAllianceApplications()");
     call.Dump(CORP__CALL_DUMP);
 
-    AllianceDB a_db;
-    return a_db.GetMyApplications(m_corpID);
-
-    return nullptr;
+    return AllianceDB::GetMyApplications(m_corpID);
 }
 
 PyResult CorpRegistryBound::Handle_DeleteAllianceApplication(PyCallArgs &call) {
@@ -2677,7 +2674,7 @@ PyResult CorpRegistryBound::Handle_DeleteAllianceApplication(PyCallArgs &call) {
         if (cur->GetChar().get() != nullptr)
         {
             cur->SendNotification("OnAllianceApplicationChanged", "clientID", oaac.Encode(), false);
-            _log(ALLY__TRACE, "OnAllianceApplicationChanged sent to client %u", cur->GetClientID());
+            _log(ALLY__TRACE, "OnAllianceApplicationChanged sent to %s(%u)", cur->GetName(), cur->GetCharID());
         }
     }
 
@@ -2688,7 +2685,7 @@ PyResult CorpRegistryBound::Handle_DeleteAllianceApplication(PyCallArgs &call) {
         if (cur->GetChar().get() != nullptr)
         {
             cur->SendNotification("OnAllianceApplicationChanged", "clientID", oaac.Encode(), false);
-            _log(ALLY__TRACE, "OnAllianceApplicationChanged sent to client %u", cur->GetClientID());
+            _log(ALLY__TRACE, "OnAllianceApplicationChanged sent to %s(%u)", cur->GetName(), cur->GetCharID());
         }
     }
 

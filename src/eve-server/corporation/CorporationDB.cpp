@@ -30,12 +30,82 @@
 #include "character/Character.h"
 #include "corporation/CorporationDB.h"
 
+// this shall be removed when i remove MulticastTarget
+#include "EntityList.h"
+
 /*
  * CORP__DB_ERROR
  * CORP__DB_WARNING
  * CORP__DB_INFO
  * CORP__DB_MESSAGE
  */
+
+bool CorporationDB::DoesCorporationExist(uint32 corpID) {
+    DBQueryResult res;
+    if (!sDatabase.RunQuery(res, "SELECT corporationID FROM crpCorporation WHERE corporationID = %u", corpID))
+    {
+        codelog(DATABASE__ERROR, "Error in query: %s", res.error.c_str());
+        return false;
+    }
+
+    return (res.GetRowCount() != 0);
+}
+
+bool CorporationDB::GetCorporationBySchool(uint32 schoolID, uint32 &corporationID) {
+    DBQueryResult res;
+
+    if (!sDatabase.RunQuery(res, "SELECT corporationID FROM chrSchools WHERE schoolID = %u", schoolID)) {
+        codelog(DATABASE__ERROR, "Error in query: %S", res.error.c_str());
+        return false;
+    }
+
+    DBResultRow row;
+    if (!res.GetRow(row)) {
+        codelog(DATABASE__ERROR, "Failed to find matching corporation for school %u", schoolID);
+        return false;
+    }
+    corporationID = row.GetInt(0);
+    return true;
+}
+
+/**
+ * @todo Here should come a call to Corp??::CharacterJoinToCorp or what the heck... for now we only put it there
+ */
+bool CorporationDB::GetLocationCorporationByCareer(CharacterData& cdata, uint32& corporationID) {
+    DBQueryResult res;
+    if (!sDatabase.RunQuery(res,
+        "SELECT "      // fixed DB Query   -allan 01/02/14  -UD 9Jul19
+        "  cs.corporationID, "
+        "  cs.schoolID, "
+        "  co.stationID, "
+        "  st.solarSystemID, "
+        "  st.constellationID, "
+        "  st.regionID "
+        " FROM careers AS c"
+        "    LEFT JOIN chrSchools AS cs USING (schoolID)"
+        "    LEFT JOIN crpCorporation AS co ON cs.corporationID = co.corporationID"
+        "    LEFT JOIN staStations AS st USING (stationID)"
+        " WHERE c.careerID = %u", cdata.careerID))
+    {
+        codelog(DATABASE__ERROR, "Error in query: %s", res.error.c_str());
+        return false;
+    }
+
+    DBResultRow row;
+    if (!res.GetRow(row)) {
+        codelog(DATABASE__ERROR, "Failed to find career %u", cdata.careerID);
+        return false;
+    }
+
+    corporationID = row.GetUInt(0);
+    cdata.schoolID = row.GetUInt(1);
+    cdata.stationID = row.GetUInt(2);
+    cdata.solarSystemID = row.GetUInt(3);
+    cdata.constellationID = row.GetUInt(4);
+    cdata.regionID = row.GetUInt(5);
+
+    return true;
+}
 
 void CorporationDB::GetCorpStations(uint32 corp_id, std::vector<uint32>& stVec) {
     DBQueryResult res;
@@ -266,7 +336,7 @@ uint16 CorporationDB::CreateMedal(uint32 ownerID, uint32 creatorID, std::string&
     std::string cTitle, cDesc;
     sDatabase.DoEscapeString(cTitle, title);
     sDatabase.DoEscapeString(cDesc, description);
-    uint32 medalID = 0;
+    uint32 medalID(0);
     DBerror err;
     sDatabase.RunQueryLID(err, medalID,
         " INSERT INTO crpMedals (ownerID, creatorID, title, description, date)"
@@ -847,7 +917,7 @@ void CorporationDB::GetMembersForQuery(std::ostringstream& query, std::vector< u
         return;
     }
 
-    _log(DATABASE__RESULTS, "CorporationDB::GetMembersForQuery '%s' returned %u items", query.str().c_str(), res.GetRowCount());
+    _log(DATABASE__RESULTS, "CorporationDB::GetMembersForQuery '%s' returned %lu items", query.str().c_str(), res.GetRowCount());
 
     DBResultRow row;
     while (res.GetRow(row))
@@ -1344,7 +1414,7 @@ void CorporationDB::DeleteAdvert(uint16 adID)
 
 uint32 CorporationDB::CreateAdvert(Client* pClient, uint32 corpID, int64 typeMask, int8 days, uint16 members, std::string description, uint32 channelID, std::string title)
 {
-    uint32 adID = 0;
+    uint32 adID(0);
     DBerror err;
     sDatabase.RunQueryLID(err, adID, "INSERT INTO crpAdRegistry"
     " (corporationID, allianceID, stationID, regionID, raceMask, typeMask,"
@@ -2048,7 +2118,7 @@ void CorporationDB::AddVoteCase(uint32 corpID, uint32 charID, Call_InsertVoteCas
         data.push_back(args2);
     }
 
-    uint32 voteCaseID = 0;
+    uint32 voteCaseID(0);
     DBerror err;
     sDatabase.RunQueryLID(err, voteCaseID,
         " INSERT INTO crpVoteItems( "
@@ -2059,7 +2129,7 @@ void CorporationDB::AddVoteCase(uint32 corpID, uint32 charID, Call_InsertVoteCas
     std::stringstream str;
     str << "INSERT INTO crpVoteOptions (voteCaseID, optionID, optionText, parameter, parameter1, parameter2) VALUES ";
 
-    bool set = false;
+    bool set(false);
     for (auto cur : data) {
         if (!set) {
             set = true;
@@ -2230,8 +2300,9 @@ void CorporationDB::MoveShares(uint32 ownerID, uint32 corpID, Call_MoveShares& a
     charUpdate.newCorpID = corpID;
     charUpdate.newOwnerID = args.toShareholderID;
     charUpdate.newOwnerNewCorpID = (isCorp ? 0 : oldCorpID);
-    /** @todo pClient may be null here.... */
-    pClient->SendNotification("OnShareChange", "charid", charUpdate.Encode());
+
+    if (pClient != nullptr)
+        pClient->SendNotification("OnShareChange", "charid", charUpdate.Encode());
 
     // add to new owner
     sDatabase.RunQuery(err,
@@ -2436,7 +2507,7 @@ PyRep* CorporationDB::GetKillsAndLosses(uint32 corpID, uint32 number, uint32 off
         return nullptr;
     }
 
-    _log(DATABASE__RESULTS, "CorporationDB::GetKillsAndLosses for corpID: %u returned %u items", corpID, res.GetRowCount());
+    _log(DATABASE__RESULTS, "CorporationDB::GetKillsAndLosses for corpID: %u returned %lu items", corpID, res.GetRowCount());
 
     return DBResultToCRowset(res);
 }
@@ -2454,7 +2525,7 @@ PyRep* CorporationDB::GetMktInfo(uint32 corpID)
         codelog(CORP__DB_ERROR, "Error on query: %s", res.error.c_str());
     }
 
-    _log(DATABASE__RESULTS, "CorporationDB::GetMktBuyInfo for corpID: %u returned %u items", corpID, res.GetRowCount());
+    _log(DATABASE__RESULTS, "CorporationDB::GetMktBuyInfo for corpID: %u returned %lu items", corpID, res.GetRowCount());
 
     return DBResultToCRowset(res);
 }

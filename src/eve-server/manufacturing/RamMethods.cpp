@@ -11,6 +11,7 @@
 
 #include "../eve-common/EVE_Character.h"
 #include "Client.h"
+#include "inventory/Inventory.h"
 #include "manufacturing/Blueprint.h"
 #include "manufacturing/RamMethods.h"
 #include "station/StationDataMgr.h"
@@ -545,23 +546,23 @@ void RamMethods::EncodeMissingMaterials(const std::vector<EvERam::RequiredItem> 
             qtyReq = (uint32)round(qtyReq * materialMultiplier + (cur.quantity * charMaterialMultiplier - cur.quantity)) * runs;
         }
 
-        std::vector<InventoryItemRef>::iterator curi, endi;
+        std::vector<InventoryItemRef>::iterator itri, endi;
         if (cur.isSkill) {
-            curi = skills.begin();
+            itri = skills.begin();
             endi = skills.end();
         } else {
-            curi = items.begin();
+            itri = items.begin();
             endi = items.end();
         }
 
-        for (; curi != endi and qtyReq > 0; ++curi) {
-            if (((*curi)->typeID() == cur.typeID)
-            and (((*curi)->ownerID() == pClient->GetCharacterID())
-              or ((*curi)->ownerID() == pClient->GetCorporationID()))) {
+        for (; itri != endi and qtyReq > 0; ++itri) {
+            if (((*itri)->typeID() == cur.typeID)
+            and (((*itri)->ownerID() == pClient->GetCharacterID())
+              or ((*itri)->ownerID() == pClient->GetCorporationID()))) {
                 if (cur.isSkill) {
-                    qtyReq -= std::min(qtyReq, (*curi)->GetAttribute(AttrSkillLevel).get_uint32() );
+                    qtyReq -= std::min(qtyReq, (*itri)->GetAttribute(AttrSkillLevel).get_uint32() );
                 } else {
-                    qtyReq -= std::min(qtyReq, (uint32)(*curi)->quantity() );
+                    qtyReq -= std::min(qtyReq, (uint32)(*itri)->quantity() );
                 }
             }
         }
@@ -596,7 +597,6 @@ void RamMethods::GetBOMItemsMap(const PathElement& bomLocation, std::map< uint16
 void RamMethods::GetAdjustedRamRequiredMaterials()
 {
     // will need to update this using above formula for correct material list
-
 }
 
 const char* RamMethods::GetActivityName(int8 activityID)
