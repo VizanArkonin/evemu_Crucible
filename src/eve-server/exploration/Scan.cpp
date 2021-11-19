@@ -28,7 +28,6 @@
 #include "EntityList.h"
 #include "StatisticMgr.h"
 #include "exploration/Scan.h"
-#include "math/Trig.h"
 #include "Probes.h"
 #include "system/SystemBubble.h"
 #include "system/SystemManager.h"
@@ -91,7 +90,7 @@ void Scan::ProcessScan(bool useProbe/*false*/)
         }
         SystemScanStarted(duration);
     }
-    _log(SCAN__TRACE, "ProcessScan() - probes - active:%lu, total:%lu, duration: %u, idle: %s", \
+    _log(SCAN__TRACE, "ProcessScan() - probes - active:%u, total:%u, duration: %u, idle: %s", \
                 m_activeProbeMap.size(), m_probeMap.size(), duration, idle?"true":"false");
     m_client->SetScanTimer(duration, true);
 }
@@ -640,13 +639,11 @@ void Scan::GetSignalData(SignalData& data, std::vector<ProbeSE*>& probeVec)
             data.deviation += itr->second.first->GetDeviation();
             data.deviation += itr->second.second->GetDeviation();
             _log(SCAN__TRACE, "Scan::GetSignalData(%u)  #%u - angle %.3f (P1 %u, P2 %u) - dist: %.3fAU, %.3fAU, rangeMod: %.5f, %.5f, scanStr: %.5f, %.5f, angleMod: %.4f, multiplier: %.5f, probeSig: %.5f, %.5f", \
-                    probeCount, count, EvE::Trig::Rad2Deg(itr->first), itr->second.first->GetID(), itr->second.second->GetID(), dist1 /ONE_AU_IN_METERS, dist2 /ONE_AU_IN_METERS,\
+                    probeCount, ++count, EvE::Trig::Rad2Deg(itr->first), itr->second.first->GetID(), itr->second.second->GetID(), dist1 /ONE_AU_IN_METERS, dist2 /ONE_AU_IN_METERS,\
                     rangeMod1, rangeMod2, scanStr1, scanStr2, angleMod, probeMultiplier, probeSig1, probeSig2);
-            ++count;
         }
         // get average deviation from all probes
-        if (count)
-            data.deviation /= (count * 2);
+        data.deviation /= count *2;
     }
 /*Results, and What They Mean
 
@@ -789,7 +786,7 @@ By maneuvering your probes and decreasing their range they will eventually give 
 // these are for moon scanning
 void Scan::ScanStart()
 {
-    // not used yet
+
 }
 
 void Scan::SurveyScan() {

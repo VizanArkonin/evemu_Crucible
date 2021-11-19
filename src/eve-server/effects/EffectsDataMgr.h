@@ -19,7 +19,7 @@ class FxDataMgr
 {
 public:
     FxDataMgr();
-    ~FxDataMgr()                                        { /* do nothing here */ }
+    ~FxDataMgr();
 
     int Initialize();
     void Populate();

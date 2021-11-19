@@ -345,7 +345,6 @@ bool PyAddress::Decode(PyRep *&in_object) {
     PyTuple *tuple = base->AsObject()->arguments()->AsTuple();
     if (tuple == nullptr) {
         codelog(NET__PACKET_ERROR, "PyAddress::Decode() - tuple is null.");
-        PyDecRef(base);
         return false;
     }
 
@@ -458,8 +457,8 @@ bool PyAddress::Decode(PyRep *&in_object) {
         }
     }
 
-    //PyDecRef(base);
-    //PySafeDecRef(tuple);
+    PyDecRef(base);
+    PySafeDecRef(tuple);
     return true;
 }
 
@@ -559,7 +558,7 @@ PyCallStream::PyCallStream()
 
 PyCallStream::~PyCallStream() {
     PySafeDecRef(arg_tuple);
-    //PySafeDecRef(arg_dict);
+    PySafeDecRef(arg_dict);
 }
 
 PyCallStream *PyCallStream::Clone() const {
@@ -752,10 +751,10 @@ bool PyCallStream::Decode(const std::string &type, PyTuple *&in_payload) {
         return false;
     }
 
-    //PyDecRef(payload);
-    //PySafeDecRef(ss);
-    //PySafeDecRef(maint);
-    //PySafeDecRef(payload2);
+    PyDecRef(payload);
+    PySafeDecRef(ss);
+    PySafeDecRef(maint);
+    PySafeDecRef(payload2);
     return true;
 }
 

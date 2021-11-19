@@ -27,7 +27,6 @@ public:
     static uint32 CreateOffice(ItemData& idata, OfficeData& odata);
     static bool GetOfficeData(uint32 officeID, OfficeData& odata);
     static void GetStationData(DBQueryResult& res);
-    static void GetStationBaseData(DBQueryResult& res, uint32 typeID);
     static void GetStationSystem(DBQueryResult& res);
     static void GetStationRegion(DBQueryResult& res);
     static void GetStationOfficeData(DBQueryResult& res);
@@ -37,17 +36,7 @@ public:
     static int32 GetOfficeCount(uint32 corpID);
 
     static void LoadOffices(OwnerData &od, std::vector<uint32> &into);
-    static void CreateOutpost(StationData& data);
-    static uint32 GetNewOutpostID();
-    static void GetStationServiceStates(uint32 stationID, DBQueryResult& res);
-    static void GetStationServiceIdentifiers(DBQueryResult& res);
-    static void GetStationServiceAccessRule(uint32 stationID, uint32 serviceID, DBQueryResult& res);
-    static void GetStationManagementServiceCostModifiers(uint32 stationID, DBQueryResult& res);
-    static void GetStationDetails(uint32 stationID, DBQueryResult& res);
-    static void GetRentableItems(uint32 stationID, DBQueryResult& res);
-    static void GetOwnerIDsOfClonesAtStation(uint32 stationID, uint32 corpID, DBQueryResult& res);
-    static void GetOutpostImprovementStaticData(DBQueryResult& res);
-    static void GetOutpostImprovements(uint32 stationID, DBQueryResult& res);
+
 
 };
 

@@ -32,7 +32,6 @@
 #include "EntityList.h"
 #include "EVE_Scanning.h"
 #include "EVEServerConfig.h"
-#include "map/MapData.h"
 #include "system/BubbleManager.h"
 #include "system/Container.h"
 #include "system/SystemBubble.h"
@@ -71,7 +70,7 @@ void BubbleManager::clear() {
 }
 
 void BubbleManager::Process() {
-    double profileStartTime(GetTimeUSeconds());
+    double profileStartTime = GetTimeUSeconds();
 
     for (auto cur : m_bubbles) {
         // process each belt and gate bubble for spawns
@@ -157,8 +156,10 @@ void BubbleManager::Add(SystemEntity* pSE, bool isPostWarp /*false*/) {
     if (pSE == nullptr)
         return;
 
-    if (pSE->GetPosition().isZero())
-         pSE->DestinyMgr()->SetPosition(sMapData.GetRandPointOnPlanet(pSE->SystemMgr()->GetID()));
+    if (pSE->GetPosition().isZero()) {
+        SystemGPoint sGP;
+        pSE->DestinyMgr()->SetPosition(sGP.GetRandPointOnPlanet(pSE->SystemMgr()->GetID()));
+    }
 
     GPoint center(pSE->GetPosition());
     if (isPostWarp) {

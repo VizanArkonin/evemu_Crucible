@@ -36,7 +36,7 @@ public:
     virtual void EncodeDestiny(Buffer& into);
 
     /* virtual functions default to base class and overridden as needed */
-    virtual void Killed(Damage &damage);
+    virtual void Killed(Damage &fatal_blow);
 
     /* specific functions handled here. */
     void SaveSentry();

@@ -173,9 +173,10 @@ PyResult TradeBound::Handle_OfferMoney(PyCallArgs &call) {
         list->SetItem(0, new PyFloat(pTSes->m_tradeSession.myMoney));  //myMoney
         list->SetItem(1, new PyFloat(pTSes->m_tradeSession.herMoney)); //herMoney
     } else {
+        list->SetItem(0, new PyFloat(0.0f)); //myMoney
+        list->SetItem(1, new PyFloat(0.0f)); //herMoney
         _log(CLIENT__ERROR, "TradeBound::Handle_OfferMoney() : %s(%u) - clients are neither mine nor hers.", \
                 call.client->GetName(), call.client->GetCharacterID());
-        PySafeDecRef(list);
         return PyStatic.NewNone();
     }
 
@@ -191,11 +192,6 @@ PyResult TradeBound::Handle_OfferMoney(PyCallArgs &call) {
     // now send it, bypassing the extra shit and wrong dest name added in Client::SendNotification
     pClient->SendNotification("OnTrade", "charid", &tuple);
     pOther->SendNotification("OnTrade", "charid", &tuple);
-
-    // cleanup
-    PySafeDecRef(tuple);
-    PySafeDecRef(list);
-
     // returns none
     return PyStatic.NewNone();
 }
@@ -226,12 +222,12 @@ PyResult TradeBound::Handle_Abort(PyCallArgs &call) {
 void TradeBound::CancelTrade(Client* pClient, Client* pOther, TradeSession* pTSes)
 {
     // trade canceled.  send items back to owner. (monies not taken at this point)
-    //PyDict* dict = new PyDict();
-    //dict->SetItem(new PyInt(Inv::Update::Location), new PyInt(pTSes->m_tradeSession.containerID));
+    PyDict* dict = new PyDict();
+    dict->SetItem(new PyInt(Inv::Update::Location), new PyInt(pTSes->m_tradeSession.containerID));
 
     uint32 stationID = pTSes->m_tradeSession.stationID;
     for (auto cur : pTSes->m_tradelist) {
-        InventoryItemRef itemRef = sItemFactory.GetItemRef(cur.itemID);
+        InventoryItemRef itemRef = sItemFactory.GetItem(cur.itemID);
         if (itemRef.get() == nullptr)  {
             _log(PLAYER__ERROR, "TradeBound::CancelTrade() - Failed to get ItemRef.");
             continue;
@@ -322,7 +318,7 @@ PyResult TradeBound::Handle_Add(PyCallArgs &call) {
         return Handle_Abort(call);
     }
 
-    InventoryItemRef itemRef = sItemFactory.GetItemRef(args.arg1);
+    InventoryItemRef itemRef = sItemFactory.GetItem(args.arg1);
     if (itemRef.get() == nullptr)  {
         _log(PLAYER__TRADE_MESSAGE, "TradeBound::Handle_Add() - Failed to get ItemRef.");
         //  should i abort trade, or just return null here?  single add, so not a big deal.
@@ -409,7 +405,7 @@ PyResult TradeBound::Handle_MultiAdd(PyCallArgs &call) {
     }
 
     uint32 flag(0);
-    if (call.byname.find("flag") != call.byname.end())
+    if (call.byname.find("flag") != call.byname.cend())
         flag = PyRep::IntegerValueU32(call.byname.find("flag")->second);
 
     PyDict* dict = new PyDict();
@@ -419,11 +415,13 @@ PyResult TradeBound::Handle_MultiAdd(PyCallArgs &call) {
     Client* pClient = sEntityList.FindClientByCharID(pTSes->m_tradeSession.myID);
     Client* pOther = sEntityList.FindClientByCharID(pTSes->m_tradeSession.herID);
 
-    if ((call.client->GetCharacterID() != pTSes->m_tradeSession.myID)
-    and (call.client->GetCharacterID() != pTSes->m_tradeSession.herID)) {
+    if (call.client->GetCharacterID() == pTSes->m_tradeSession.myID) {
+        // this is 'my'
+    } else if (call.client->GetCharacterID() == pTSes->m_tradeSession.herID) {
+        // this is 'her'
+    } else {
         _log(PLAYER__TRADE_MESSAGE, "TradeBound::Handle_MultiAdd() : %s(%u) & %s(%u) - clients are neither mine nor hers.", \
                 pClient->GetName(), pClient->GetCharacterID(), pOther->GetName(), pOther->GetCharacterID());
-        PySafeDecRef(dict);
         return PyStatic.NewNone();
     }
 
@@ -433,7 +431,7 @@ PyResult TradeBound::Handle_MultiAdd(PyCallArgs &call) {
     DBRowDescriptor* header = sDataMgr.CreateHeader();
     std::vector<int32> list = args.ints;
     for (auto cur : list) {
-        InventoryItemRef itemRef = sItemFactory.GetItemRef(cur);
+        InventoryItemRef itemRef = sItemFactory.GetItem(cur);
         if (itemRef.get() == nullptr)  {
             _log(PLAYER__ERROR, "TradeBound::Handle_Add() - Failed to get ItemRef.");
             continue;
@@ -454,7 +452,7 @@ PyResult TradeBound::Handle_MultiAdd(PyCallArgs &call) {
         pTSes->m_tradelist.insert(pTSes->m_tradelist.end(), mTI);
         itemRef->Move(tradeContID, (EVEItemFlags)flag, true);
 
-        PyPackedRow* row = new PyPackedRow(header);
+        PyPackedRow* row = new PyPackedRow( header );
             row->SetField("itemID",        new PyLong(mTI.itemID));
             row->SetField("typeID",        new PyInt(mTI.typeID));
             row->SetField("ownerID",       new PyInt(mTI.ownerID));
@@ -476,11 +474,6 @@ PyResult TradeBound::Handle_MultiAdd(PyCallArgs &call) {
     //  reset states after offer changes.
     pTSes->m_tradeSession.myState  = false;
     pTSes->m_tradeSession.herState = false;
-
-    // cleanup
-    PySafeDecRef(dict);
-    PySafeDecRef(header);
-
     // return none
     return PyStatic.NewNone();
 }
@@ -570,12 +563,12 @@ void TradeBound::ExchangeItems(Client* pClient, Client* pOther, TradeSession* pT
     AccountService::TranserFunds(pClient->GetCharacterID(), pOther->GetCharacterID(), pTSes->m_tradeSession.myMoney, reason, Journal::EntryType::PlayerTrading, pClient->GetStationID());
     AccountService::TranserFunds(pOther->GetCharacterID(), pClient->GetCharacterID(), pTSes->m_tradeSession.herMoney, reason, Journal::EntryType::PlayerTrading, pClient->GetStationID());
 
-    //PyDict* dict = new PyDict();
-    //    dict->SetItem(new PyInt(Inv::Update::Location), new PyInt(pTSes->m_tradeSession.containerID));
+    PyDict* dict = new PyDict();
+        dict->SetItem(new PyInt(Inv::Update::Location), new PyInt(pTSes->m_tradeSession.containerID));
 
     uint32 stationID = pTSes->m_tradeSession.stationID;
     for (auto cur : pTSes->m_tradelist) {
-        InventoryItemRef itemRef = sItemFactory.GetItemRef(cur.itemID);
+        InventoryItemRef itemRef = sItemFactory.GetItem(cur.itemID);
         if (!itemRef)  {
             _log(PLAYER__ERROR, "TradeBound::Handle_Add() - Failed to get ItemRef.");
             continue;
@@ -612,13 +605,13 @@ void TradeService::TransferContainerContents(SystemManager* pSysMgr, InventoryIt
         ShipDB::DeleteInsuranceByShipID(itemRef->itemID());
         ShipItemRef shipRef = pSysMgr->GetShipFromInventory(itemRef->itemID());
         if (shipRef.get() == nullptr)
-            shipRef = sItemFactory.GetShipRef(itemRef->itemID());
+            shipRef = sItemFactory.GetShip(itemRef->itemID());
         if (!shipRef->GetMyInventory()->IsEmpty())
             shipRef->GetMyInventory()->GetInventoryMap(InventoryMap);
     } else {
         CargoContainerRef contRef = pSysMgr->GetContainerFromInventory(itemRef->itemID());
         if (contRef.get() == nullptr)
-            contRef = sItemFactory.GetCargoRef(itemRef->itemID());
+            contRef = sItemFactory.GetCargoContainer(itemRef->itemID());
         if (!contRef->IsEmpty())
             contRef->GetMyInventory()->GetInventoryMap(InventoryMap);
     }

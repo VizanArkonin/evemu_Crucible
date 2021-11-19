@@ -33,29 +33,31 @@
 
 #include "ServiceDB.h"
 
+class PyRep;
+
 class MarketDB
 : public ServiceDB
 {
 public:
-    static PyRep* GetMarketGroups();
-    static PyRep* GetOrders(uint32 regionID, uint16 typeID);
-    static PyRep* GetOrderRow(uint32 orderID);
-    static PyRep* GetRegionBest(uint32 regionID);
-    static PyRep* GetSystemAsks(uint32 solarSystemID);
-    static PyRep* GetStationAsks(uint32 stationID);
-    static PyRep* GetOrdersForOwner(uint32 ownerID);
+    PyRep* GetMarketGroups();
+    PyRep* GetOrders(uint32 regionID, uint16 typeID);
+    PyRep* GetOrderRow(uint32 orderID);
+    PyRep* GetRegionBest(uint32 regionID);
+    PyRep* GetSystemAsks(uint32 solarSystemID);
+    PyRep* GetStationAsks(uint32 stationID);
+    PyRep* GetOrdersForOwner(uint32 ownerID);
 
-    static PyRep* GetTransactions(uint32 ownerID, Market::TxData &data);
+    PyRep* GetTransactions(uint32 ownerID, Market::TxData &data);
 
-    static bool DeleteOrder(uint32 orderID);
-    static bool GetOrderInfo(uint32 orderID, Market::OrderInfo &oInfo);
-    static bool AlterOrderPrice(uint32 orderID, double new_price);
-    static bool RecordTransaction(Market::TxData &data);
-    static bool AlterOrderQuantity(uint32 orderID, uint32 new_qty);
+    bool DeleteOrder(uint32 orderID);
+    bool GetOrderInfo(uint32 orderID, Market::OrderInfo &oInfo);
+    bool AlterOrderPrice(uint32 orderID, double new_price);
+    bool RecordTransaction(Market::TxData &data);
+    bool AlterOrderQuantity(uint32 orderID, uint32 new_qty);
 
-    static uint32 FindBuyOrder(Call_PlaceCharOrder &call);
-    static uint32 FindSellOrder(Call_PlaceCharOrder &call);
-    static uint32 StoreOrder(Market::SaveData& data);
+    uint32 FindBuyOrder(Call_PlaceCharOrder &call);
+    uint32 FindSellOrder(Call_PlaceCharOrder &call);
+    uint32 StoreOrder(Market::SaveData& data);
 
 
     /* for base price estimator */
@@ -74,6 +76,13 @@ public:
     static void SetUpdateTime(int64 setTime);
 
     static void UpdateHistory();
+
 };
 
+
+
+
+
 #endif
+
+

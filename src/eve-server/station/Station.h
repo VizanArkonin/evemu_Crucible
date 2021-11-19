@@ -82,7 +82,6 @@ public:
      * @return Pointer to new Station object; NULL if fails.
      */
     static StationItemRef Load( uint32 stationID);
-    static StationItemRef Spawn( ItemData &data);
 
     StationType* GetStationType() { return &m_stationType; }
     ShipItemRef GetShipFromInventory(uint32 shipID);
@@ -132,15 +131,15 @@ protected:
             _log(ITEM__ERROR, "Trying to load %s as Station.", sDataMgr.GetGroupName(type.groupID()));
             if (sConfig.debug.StackTrace)
                 EvE::traceStack();
-            return RefPtr<_Ty>(nullptr);
+            return RefPtr<_Ty>();
         }
         // cast the type
         const StationType &stType = static_cast<const StationType &>( type );
 
         // load celestial data
         CelestialObjectData cData = CelestialObjectData();
-        if (!SystemDB::GetCelestialObjectData(stationID, cData))
-            return RefPtr<_Ty>(nullptr);
+        if (!sItemFactory.db()->GetCelestialObject(stationID, cData))
+            return RefPtr<_Ty>();
 
         return StationItemRef(new StationItem(stationID, stType, data, cData));
     }

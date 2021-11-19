@@ -28,14 +28,12 @@
 #define EVE_ENTITY_LIST_H
 
 #include <vector>
-
+#include <map>
+#include <set>
+#include "eve-compat.h"
 #include "eve-common.h"
 #include "utils/Singleton.h"
-
-#include "inventory/ItemRef.h"
-
-// this is not used.  was supposed to be for eventual MT work
-//#include "threading/Mutex.h"
+#include "threading/Mutex.h"
 
 class Agent;
 class Client;
@@ -119,7 +117,6 @@ public:
     void GetClients(std::vector<Client* > &result) const;
     void GetCorpClients(std::vector<Client*> &result, uint32 corpID) const;
 
-    bool IsSystemLoaded(uint32 sysID) { return (m_systems.find(sysID) != m_systems.end()); }
     void AddStation(uint32 stationID, StationItemRef itemRef);
     void RemoveStation(uint32 stationID);
     StationItemRef GetStationByID(uint32 stationID);
@@ -168,7 +165,7 @@ public:
 protected:
     PyServiceMgr* m_services;    //we do not own this, only used for booting systems.
 
-    //Mutex mMutex;
+    Mutex mMutex;
 
 private:
     Timer m_stampTimer;

@@ -27,6 +27,7 @@
 #define __CHARUNBOUNDMGRSERVICE__H__INCL__
 
 #include "PyService.h"
+#include "character/CharacterDB.h"
 
 /**
  * \class CharUnboundMgrService
@@ -43,9 +44,13 @@ public:
     CharUnboundMgrService(PyServiceMgr* mgr);
     ~CharUnboundMgrService();
 
+    void GetCharacterData(uint32 characterID, std::map<std::string, int64> &characterDataMap);
+
 private:
     class Dispatcher;
     Dispatcher *const m_dispatch;
+
+    CharacterDB m_db;
 
     PyCallable_DECL_CALL(SelectCharacterID);
 

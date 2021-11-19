@@ -41,8 +41,7 @@ public:
 
     PlanetORBBound(PyServiceMgr *mgr, uint32 systemID)
     : PyBoundObject(mgr),
-    m_dispatch(new Dispatcher(this)),
-    m_systemID(systemID)
+    m_dispatch(new Dispatcher(this))
     {
         _SetCallDispatcher(m_dispatch);
 
@@ -52,8 +51,9 @@ public:
         PyCallable_REG_CALL(PlanetORBBound, UpdateSettings);
         PyCallable_REG_CALL(PlanetORBBound, GetSettingsInfo);
         PyCallable_REG_CALL(PlanetORBBound, GMChangeSpaceObjectOwner);
-    }
 
+        m_systemID = systemID;
+    }
     virtual ~PlanetORBBound() { delete m_dispatch; }
     virtual void Release() {
         //He hates this statement
@@ -67,6 +67,7 @@ public:
 
 protected:
     Dispatcher* const m_dispatch;
+    PlanetDB* m_db;
 
 private:
     uint32 m_systemID;
@@ -92,7 +93,7 @@ PlanetORB::~PlanetORB() {
 PyBoundObject* PlanetORB::CreateBoundObject(Client *pClient, const PyRep *bind_args) {
     _log(PLANET__INFO, "PlanetORB bind request for:");  // sends systemID in request
     bind_args->Dump(PLANET__INFO, "    ");
-    if (!bind_args->IsInt()) {
+    if(!bind_args->IsInt()) {
         codelog(SERVICE__ERROR, "%s Service: invalid bind argument type %s", GetName(), bind_args->TypeString());
         return nullptr;
     }

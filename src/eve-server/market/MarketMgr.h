@@ -33,8 +33,8 @@ public:
     void GetInfo();
     void Process();
 
-    void SystemStartup(SolarSystemData &data);
-    void SystemShutdown(SolarSystemData &data);
+    void SystemStartup(SystemData &data);
+    void SystemShutdown(SystemData &data);
 
     void UpdatePriceHistory();
 

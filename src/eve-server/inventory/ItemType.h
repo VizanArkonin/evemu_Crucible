@@ -31,10 +31,8 @@
 
 #include "StaticDataMgr.h"
 #include "effects/EffectsData.h"
-//#include "inventory/AttributeMap.h"
-//#include "inventory/ItemFactory.h"
-
-//struct Effect;
+#include "inventory/AttributeMap.h"
+#include "inventory/ItemFactory.h"
 
 /*
  * LOADING INVOKATION EXPLANATION:
@@ -188,9 +186,9 @@ public:
     bool            singleton :1;            // singletonBlueprintCopy = 2
     EVEItemFlags    flag;
     uint16          typeID;
-    int32           quantity;
     uint32          ownerID;
     uint32          locationID;
+    uint32          quantity;
     GPoint          position;
     std::string     name;
     std::string     customInfo;

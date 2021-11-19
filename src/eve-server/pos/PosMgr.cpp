@@ -260,7 +260,7 @@ PyResult PosMgrBound::Handle_InstallJumpBridgeLink(PyCallArgs &call) {
     // Install jump bridge link both ways
     m_db.InstallBridgeLink(args.itemID, args.toSystemID, args.toItemID);
     m_db.InstallBridgeLink(args.toItemID, call.client->GetSystemID(), args.itemID);
-
+    
     return PyStatic.NewNone();
 }
 
@@ -581,10 +581,6 @@ PyResult PosMgrBound::Handle_SetShipPassword( PyCallArgs &call ) {
      * 13:16:17 [SvcCall]         [ 0] WString: 'test'             << password
      */
 
-    // havent been able to call this while docked, but there is an error msg for it.
-    if (call.client->IsDocked())
-        throw UserError("CannotSetShieldHarmonicPassword");
-
     call.client->GetShipSE()->SetPassword(PyRep::StringContent(call.tuple->GetItem(0)));
 
     return PyStatic.NewNone();
@@ -680,7 +676,6 @@ PyResult PosMgrBound::Handle_AnchorStructure(PyCallArgs &call) {
     if (pTSE->IsTowerSE()) {
         uint32 dist = pTSE->GetSelf()->radius() + call.client->GetShip()->radius();
         call.client->GetShipSE()->DestinyMgr()->WarpTo(pos, dist);
-        /** @todo add tower anchor position to bookmark */
     }
     // returns nodeID and timestamp
     PyTuple* tuple = new PyTuple(2);

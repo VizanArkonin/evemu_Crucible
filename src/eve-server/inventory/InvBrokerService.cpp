@@ -42,6 +42,7 @@ class InvBrokerBound
 : public PyBoundObject
 {
 public:
+
     PyCallable_Make_Dispatcher(InvBrokerBound)
 
     InvBrokerBound(PyServiceMgr *mgr, uint32 locationID, uint32 groupID)
@@ -65,8 +66,8 @@ public:
         PyCallable_REG_CALL(InvBrokerBound, SplitStack);
         PyCallable_REG_CALL(InvBrokerBound, DeliverToCorpHangar);
         PyCallable_REG_CALL(InvBrokerBound, DeliverToCorpMember);
-    }
 
+    }
     virtual ~InvBrokerBound()
     {
         delete m_dispatch;
@@ -144,7 +145,7 @@ PyResult InvBrokerBound::Handle_GetContainerContents(PyCallArgs &call)
         return nullptr;
     }
 
-    InventoryItemRef item = sItemFactory.GetItemRefFromID( args.arg1 );
+    InventoryItemRef item = sItemFactory.GetInventoryItemFromID( args.arg1 );
     if (item.get() == nullptr) {
         _log(INV__ERROR, "GetContainerContents() - Unable to load inventory for itemID %u in locationID %u", args.arg1, args.arg2);
         return nullptr;
@@ -187,9 +188,9 @@ PyResult InvBrokerBound::Handle_GetInventoryFromId(PyCallArgs &call) {
     // if item requested is office folder, we have to do shit a lil different, as it sends officeFolderID, instead of itemID
     if ((m_groupID == EVEDB::invGroups::Station) and (IsOfficeFolder(args.arg1))) {
         uint32 officeID = stDataMgr.GetOfficeIDForCorp(m_locationID, call.client->GetCorporationID());
-        iRef = sItemFactory.GetItemRefFromID( officeID );
+        iRef = sItemFactory.GetInventoryItemFromID( officeID );
     } else {
-        iRef = sItemFactory.GetItemRefFromID( args.arg1 );
+        iRef = sItemFactory.GetInventoryItemFromID( args.arg1 );
     }
     sItemFactory.UnsetUsingClient();
     if (iRef.get() == nullptr) {
@@ -321,13 +322,13 @@ PyResult InvBrokerBound::Handle_GetInventory(PyCallArgs &call) {
     if (m_groupID == EVEDB::invGroups::Station) {
         _log(INV__WARNING, "GetInventory called for station %u", m_locationID);
         //item = sEntityList.GetStationByID(m_locationID);
-        item = sItemFactory./*GetStation*/GetItemRef(m_locationID);
+        item = sItemFactory./*GetStation*/GetItem(m_locationID);
     } else if (m_groupID == EVEDB::invGroups::Solar_System) {
         _log(INV__WARNING, "GetInventory called for solar system %u", m_locationID);
-        item = sItemFactory./*GetSolarSystem*/GetItemRef(m_locationID);
+        item = sItemFactory./*GetSolarSystem*/GetItem(m_locationID);
     } else {
         _log(INV__WARNING, "GetInventory called for item %u (group: %u)", m_locationID, m_groupID);
-        item = sItemFactory./*GetItemRefFromID*/GetItemRef(m_locationID);
+        item = sItemFactory./*GetInventoryItemFromID*/GetItem(m_locationID);
     }
     sItemFactory.UnsetUsingClient();
 
@@ -412,7 +413,7 @@ PyResult InvBrokerBound::Handle_SetLabel(PyCallArgs &call) {
     }
 
     sItemFactory.SetUsingClient( call.client );
-    InventoryItemRef iRef = sItemFactory.GetItemRef( args.itemID );
+    InventoryItemRef iRef = sItemFactory.GetItem( args.itemID );
     if (iRef.get() == nullptr) {
         codelog(INV__ERROR, "%s: Unable to load item %u", call.client->GetName(), args.itemID);
         sItemFactory.UnsetUsingClient();
@@ -471,7 +472,7 @@ PyResult InvBrokerBound::Handle_TrashItems(PyCallArgs &call) {
 
     std::vector<int32>::const_iterator cur = args.items.begin(), end = args.items.end();
     for(; cur != end; ++cur) {
-        InventoryItemRef item = sItemFactory.GetItemRef( *cur );
+        InventoryItemRef item = sItemFactory.GetItem( *cur );
         if (item.get() == nullptr) {
             _log(INV__ERROR, "%s: Unable to load item %u to delete it. Skipping.", call.client->GetName(), *cur);
         } else if (call.client->GetCharacterID() != item->ownerID()) {
@@ -511,7 +512,7 @@ PyResult InvBrokerBound::Handle_AssembleCargoContainer(PyCallArgs &call) {
      * 14:37:46 [InvMsg]         [ 2] Real field: 0.000000
      */
 
-    sLog.Warning( "InvBrokerBound::Handle_AssembleCargoContainer()", "size=%lu", call.tuple->size());
+    sLog.Warning( "InvBrokerBound::Handle_AssembleCargoContainer()", "size=%li", call.tuple->size());
     call.Dump(INV__DUMP);
 
     return nullptr;
@@ -519,7 +520,7 @@ PyResult InvBrokerBound::Handle_AssembleCargoContainer(PyCallArgs &call) {
 
 PyResult InvBrokerBound::Handle_BreakPlasticWrap(PyCallArgs &call) {
     // ConfirmBreakCourierPackage   - this is for courier contracts
-    sLog.Warning( "InvBrokerBound::Handle_BreakPlasticWrap()", "size=%lu", call.tuple->size());
+    sLog.Warning( "InvBrokerBound::Handle_BreakPlasticWrap()", "size=%li", call.tuple->size());
     call.Dump(INV__DUMP);
 
     return nullptr;
@@ -527,7 +528,7 @@ PyResult InvBrokerBound::Handle_BreakPlasticWrap(PyCallArgs &call) {
 
 PyResult InvBrokerBound::Handle_TakeOutTrash(PyCallArgs &call) {
     //self.invCache.GetInventory(const.containerHangar).TakeOutTrash([ invItem.itemID for invItem in invItems ])
-    sLog.Warning( "InvBrokerBound::Handle_TakeOutTrash()", "size=%lu", call.tuple->size());
+    sLog.Warning( "InvBrokerBound::Handle_TakeOutTrash()", "size=%li", call.tuple->size());
     call.Dump(INV__DUMP);
 
     return nullptr;
@@ -545,7 +546,7 @@ PyResult InvBrokerBound::Handle_SplitStack(PyCallArgs &call) {
     18:22:26 [InvDump]       [ 3]    Integer: 98000001          << ownerID (corpID)
     */
 
-    sLog.Warning( "InvBrokerBound::Handle_SplitStack()", "size=%lu", call.tuple->size());
+    sLog.Warning( "InvBrokerBound::Handle_SplitStack()", "size=%li", call.tuple->size());
     call.Dump(INV__DUMP);
 
     return nullptr;
@@ -566,7 +567,7 @@ PyResult InvBrokerBound::Handle_DeliverToCorpHangar(PyCallArgs &call) {
     18:11:51 [InvDump]       [ 5]    Integer: 119               << destination flagID
     */
 
-    sLog.Warning( "InvBrokerBound::Handle_DeliverToCorpHangar()", "size=%lu", call.tuple->size());
+    sLog.Warning( "InvBrokerBound::Handle_DeliverToCorpHangar()", "size=%li", call.tuple->size());
     call.Dump(INV__DUMP);
 
     return nullptr;
@@ -585,7 +586,7 @@ PyResult InvBrokerBound::Handle_DeliverToCorpMember(PyCallArgs &call) {
     18:49:06 [InvDump]       [ 3]       None                    << u/k
     18:49:06 [InvDump]       [ 4]    Integer: 98000001          << ownerID (corpID)
     */
-    sLog.Warning( "InvBrokerBound::Handle_DeliverToCorpMember()", "size=%lu", call.tuple->size());
+    sLog.Warning( "InvBrokerBound::Handle_DeliverToCorpMember()", "size=%li", call.tuple->size());
     call.Dump(INV__DUMP);
 
     return nullptr;

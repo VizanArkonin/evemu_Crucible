@@ -64,6 +64,7 @@ BookmarkService::BookmarkService(PyServiceMgr *mgr)
     PyCallable_REG_CALL(BookmarkService, MoveBookmarksToFolder);
     PyCallable_REG_CALL(BookmarkService, AddBookmarkFromVoucher);
     PyCallable_REG_CALL(BookmarkService, CopyBookmarks);
+
 }
 
 BookmarkService::~BookmarkService() {
@@ -90,7 +91,7 @@ PyResult BookmarkService::Handle_CreateFolder(PyCallArgs &call) {
     uint32 ownerID = call.client->GetCharacterID();
     Rsp_CreateFolder result;
         result.ownerID = ownerID;
-        result.folderID = m_db.SaveNewFolder(name, ownerID, ownerID);
+        result.folderID = m_db.SaveNewFolder(name, ownerID);
         result.folderName = name;
         result.creatorID = ownerID;
 
@@ -288,7 +289,7 @@ PyResult BookmarkService::Handle_MoveBookmarksToFolder(PyCallArgs &call) {
     for (size_t i = 0; i < bmList->size(); ++i)
         bmIDs.push_back(bmList->GetItem(i)->AsInt()->value());
 
-    m_db.MoveBookmarkToFolder(args.folderID, bmIDs);
+    m_db.MoveBookmarkToFolder(args.folderID, &bmIDs);
 
     return m_db.GetBookmarksInFolder(args.folderID);
 }
@@ -314,7 +315,7 @@ PyResult BookmarkService::Handle_AddBookmarkFromVoucher(PyCallArgs &call) {
      *    args.ownerID
      *    args.folderID
      */
-    InventoryItemRef iRef = sItemFactory.GetItemRef(args.itemID);
+    InventoryItemRef iRef = sItemFactory.GetItem(args.itemID);
     if (iRef.get() == nullptr) {
         codelog(ITEM__ERROR, "%s: Failed to retrieve bookmark data for voucherID %u", call.client->GetName(), args.itemID);
         return nullptr;
@@ -382,7 +383,7 @@ PyResult BookmarkService::Handle_CopyBookmarks(PyCallArgs &call) {
 
     PyList* list = new PyList();
     for (size_t i = 0; i < bmList->size(); ++i) {
-        InventoryItemRef iRef = sItemFactory.GetItemRef(bmList->GetItem(i)->AsInt()->value());
+        InventoryItemRef iRef = sItemFactory.GetItem(bmList->GetItem(i)->AsInt()->value());
         if (iRef.get() == nullptr) {
             codelog(ITEM__ERROR, "%s: Failed to retrieve bookmark data for voucherID %u", call.client->GetName(), bmList->GetItem(i)->AsInt()->value());
             continue;

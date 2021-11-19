@@ -41,10 +41,13 @@
 class ServiceDB
 {
 public:
+
     static bool GetAccountInformation(CryptoChallengePacket& ccp, AccountData& aData, std::string& failMsg);
     static bool UpdateAccountHash( const char* username, std::string &hash );
     static bool IncrementLoginCount(uint32 accountID );
     static void UpdatePassword(uint32 accountID, const char* pass);
+
+    static void SaveKillOrLoss(CharKillData& data);
 
     uint32 GetStationOwner(uint32 stationID);
 
@@ -52,6 +55,7 @@ public:
     static bool GetConstant(const char *name, uint32 &into);
 
     static void SetServerOnlineStatus(bool online=false);
+    static void SetCharacterOnlineStatus(uint32 char_id, bool online=false);
     static void SetAccountOnlineStatus(uint32 accountID, bool online=false);
     static void SetAccountBanStatus(uint32 accountID, bool banned=false);
     static void SaveServerStats(double threads, float rss, float vm, float user, float kernel, uint32 items, uint32 bubbles);
@@ -74,7 +78,6 @@ public:
     // get corp hangar names for `.cargo` command
     static void GetCorpHangarNames(uint32 corpID, std::map<uint8, std::string> &hangarNames);
 
-    static void SaveKillOrLoss(KillData& data);
 
 protected:
     void ProcessStringChange(const char* key, const std::string& oldValue, std::string newValue, PyDict* notif, std::vector< std::string >& dbQ);
@@ -95,7 +98,9 @@ protected:
      * @author firefoxpdm, xanarox
      */
     static uint32 CreateNewAccount( const char* login, const char* pass, const char* passHash, int64 role );
+
 };
 
-
 #endif
+
+

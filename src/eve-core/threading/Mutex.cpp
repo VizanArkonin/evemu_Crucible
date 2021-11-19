@@ -84,11 +84,10 @@ void Mutex::Unlock()
 /*************************************************************************/
 /* MRMutex                                                               */
 /*************************************************************************/
-MRMutex::MRMutex()
-: wl(0),
-rl(0),
-wr(0)
-{
+MRMutex::MRMutex() {
+    rl = 0;
+    wr = 0;
+    wl = 0;
 }
 
 MRMutex::~MRMutex() {
@@ -111,7 +110,8 @@ bool MRMutex::TryReadLock() {
         ++rl;
         MCounters.Unlock();
         return true;
-    } else {
+    }
+    else {
         MCounters.Unlock();
         return false;
     }
@@ -134,7 +134,8 @@ void MRMutex::WriteLock() {
         ++wl;
         MCounters.Unlock();
         return;
-    } else {
+    }
+    else {
         ++wr;
         MCounters.Unlock();
         while (1) {
@@ -145,6 +146,7 @@ void MRMutex::WriteLock() {
                 MCounters.Unlock();
                 return;
             }
+            MCounters.Lock();
         }
     }
 }
@@ -155,7 +157,8 @@ bool MRMutex::TryWriteLock() {
         ++wl;
         MCounters.Unlock();
         return true;
-    } else {
+    }
+    else {
         MCounters.Unlock();
         return false;
     }

@@ -150,6 +150,7 @@ public:
 protected:
     virtual ~CRowSet()    { /* do we need to do anything here? */ }
     DBRowDescriptor* _GetRowDesc() const;
+    //PyList* _GetColumnList() const;
 
     static PyTuple* _CreateArgs();
     static PyDict* _CreateKeywords(DBRowDescriptor* rowDesc);
@@ -197,6 +198,7 @@ public:
 protected:
     virtual ~CIndexedRowSet()    { /* do we need to do anything here? */ }
     DBRowDescriptor* _GetRowDesc() const;
+    //PyList* _GetColumnList() const;
 
     static PyTuple* _CreateArgs();
     static PyDict* _CreateKeywords(DBRowDescriptor* rowDesc);
@@ -243,6 +245,7 @@ public:
 protected:
     virtual ~CFilterRowSet()    { /* do we need to do anything here? */ }
     DBRowDescriptor* _GetRowDesc() const;
+    //PyList* _GetColumnList() const;
 
     static PyTuple* _CreateArgs();
     static PyDict* _CreateKeywords(DBRowDescriptor* rowDesc);

@@ -13,7 +13,6 @@
 
 
 #include "EVEServerConfig.h"
-#include "inventory/Inventory.h"
 #include "inventory/InventoryItem.h"
 #include "station/StationDB.h"
 
@@ -33,9 +32,11 @@ public:
     virtual void AddItem(InventoryItemRef item);
     virtual void RemoveItem(InventoryItemRef item);
 
+    const ItemType& type() const                        { return InventoryItem::type(); }
+
     PyObject *StationOfficeGetInfo();
 
-    bool IsEmpty()                                      { return (m_loaded ? pInventory->IsEmpty() : false); }
+    bool IsEmpty()                                      { return (m_loaded ? GetMyInventory()->IsEmpty() : false); }
     bool IsLoaded()                                     { return m_loaded; }
 
     void SetLoaded(bool set=false)                      { m_loaded = set; }
@@ -51,12 +52,12 @@ protected:
             _log(ITEM__ERROR, "Trying to load itemID %u as Office.", type.id());
             if (sConfig.debug.StackTrace)
                 EvE::traceStack();
-            return RefPtr<_Ty>(nullptr);
+            return RefPtr<_Ty>();
         }
 
         OfficeData odata = OfficeData();
         if (!StationDB::GetOfficeData(officeID, odata))
-            return RefPtr<_Ty>(nullptr);
+            return RefPtr<_Ty>();
 
         return StationOfficeRef(new StationOffice(officeID, type, idata, odata));
     }

@@ -64,15 +64,15 @@ int MarketMgr::Initialize(PyServiceMgr* pManager)
 void MarketMgr::Populate()
 {
     double start = GetTimeMSeconds();
-    m_marketGroups = MarketDB::GetMarketGroups();
+    m_marketGroups = m_db.GetMarketGroups();
 
     Process();
 
     // market orders stored as {regionID/typeID}    --do we want to store orders in memory for loaded region??
-    // MarketDB::GetOrders(call.client->GetRegionID(), args.arg);
+    // m_db.GetOrders(call.client->GetRegionID(), args.arg);
 
-    sLog.Cyan("        MarketMgr", "Market Manager Updates Price History every %u hours.", sConfig.market.HistoryUpdateTime);
     sLog.Blue("        MarketMgr", "Market Manager loaded in %.3fms.", (GetTimeMSeconds() - start));
+    sLog.Cyan("        MarketMgr", "Market Manager Updates Price History every %u hours.", sConfig.market.HistoryUpdateTime);
 }
 
 void MarketMgr::GetInfo()
@@ -88,12 +88,12 @@ void MarketMgr::Process()
     //    UpdatePriceHistory();
 }
 
-void MarketMgr::SystemStartup(SolarSystemData& data)
+void MarketMgr::SystemStartup(SystemData& data)
 {
     // not used yet.
 }
 
-void MarketMgr::SystemShutdown(SolarSystemData& data)
+void MarketMgr::SystemShutdown(SystemData& data)
 {
     // not used yet.
 }
@@ -158,7 +158,7 @@ PyRep *MarketMgr::GetNewPriceHistory(uint32 regionID, uint32 typeID) {
         DBQueryResult res;
 
         /** @todo  this doesnt belong here...  */
-        if (!sDatabase.RunQuery(res,
+        if(!sDatabase.RunQuery(res,
             "SELECT historyDate, lowPrice, highPrice, avgPrice, volume, orders"
             " FROM mktHistory "
             " WHERE regionID=%u AND typeID=%u"
@@ -200,7 +200,7 @@ PyRep *MarketMgr::GetOldPriceHistory(uint32 regionID, uint32 typeID) {
         DBQueryResult res;
 
         /** @todo  this doesnt belong here...  */
-        if (!sDatabase.RunQuery(res,
+        if(!sDatabase.RunQuery(res,
             "SELECT historyDate, lowPrice, highPrice, avgPrice, volume, orders"
             " FROM mktHistory WHERE regionID=%u AND typeID=%u"
             " AND historyDate > %li AND historyDate < %li LIMIT %u",
@@ -235,7 +235,7 @@ void MarketMgr::SendOnOwnOrderChanged(Client* pClient, uint32 orderID, uint8 act
     if (order != nullptr) {
         ooc.order = order;
     } else {
-        ooc.order = MarketDB::GetOrderRow(orderID);
+        ooc.order = m_db.GetOrderRow(orderID);
     }
 
     switch (action) {
@@ -302,7 +302,7 @@ void MarketMgr::InvalidateOrdersCache(uint32 regionID, uint32 typeID)
 
 bool MarketMgr::ExecuteBuyOrder(Client* seller, uint32 orderID, InventoryItemRef iRef, Call_PlaceCharOrder& args, uint16 accountKey/*Account::KeyType::Cash*/) {
     Market::OrderInfo oInfo = Market::OrderInfo();
-    if (!MarketDB::GetOrderInfo(orderID, oInfo)) {
+    if (!m_db.GetOrderInfo(orderID, oInfo)) {
         _log(MARKET__ERROR, "ExecuteBuyOrder - Failed to get order info for #%u.", orderID);
         return true;
     }
@@ -453,7 +453,7 @@ bool MarketMgr::ExecuteBuyOrder(Client* seller, uint32 orderID, InventoryItemRef
     data.regionID       = sDataMgr.GetStationRegion(args.stationID);
     data.typeID         = args.typeID;
 
-    if (!MarketDB::RecordTransaction(data)) {
+    if (!m_db.RecordTransaction(data)) {
         _log(MARKET__ERROR, "ExecuteBuyOrder - Failed to record sale side of transaction.");
     }
 
@@ -462,7 +462,7 @@ bool MarketMgr::ExecuteBuyOrder(Client* seller, uint32 orderID, InventoryItemRef
         data.isBuy          = Market::Type::Buy;
         data.clientID       = oInfo.ownerID;
         data.memberID       = isCorp?oInfo.memberID:0;
-        if (!MarketDB::RecordTransaction(data)) {
+        if (!m_db.RecordTransaction(data)) {
             _log(MARKET__ERROR, "ExecuteBuyOrder - Failed to record buy side of transaction.");
         }
     }
@@ -470,7 +470,7 @@ bool MarketMgr::ExecuteBuyOrder(Client* seller, uint32 orderID, InventoryItemRef
     if (qtyStatus == Market::QtyStatus::Under) {
         uint32 newQty(oInfo.quantity - args.quantity);
         _log(MARKET__TRACE, "ExecuteBuyOrder - Partially satisfied order #%u, altering quantity to %u.", orderID, newQty);
-        if (!MarketDB::AlterOrderQuantity(orderID, newQty)) {
+        if (!m_db.AlterOrderQuantity(orderID, newQty)) {
             _log(MARKET__ERROR, "ExecuteBuyOrder - Failed to alter quantity of order #%u.", orderID);
             return true;
         }
@@ -482,8 +482,8 @@ bool MarketMgr::ExecuteBuyOrder(Client* seller, uint32 orderID, InventoryItemRef
     }
 
     _log(MARKET__TRACE, "ExecuteBuyOrder - Satisfied order #%u, deleting.", orderID);
-    PyRep* order = MarketDB::GetOrderRow(orderID);
-    if (!MarketDB::DeleteOrder(orderID)) {
+    PyRep* order = m_db.GetOrderRow(orderID);
+    if (!m_db.DeleteOrder(orderID)) {
         _log(MARKET__ERROR, "ExecuteBuyOrder - Failed to delete order #%u.", orderID);
         return true;
     }
@@ -495,7 +495,7 @@ bool MarketMgr::ExecuteBuyOrder(Client* seller, uint32 orderID, InventoryItemRef
 
 void MarketMgr::ExecuteSellOrder(Client* buyer, uint32 orderID, Call_PlaceCharOrder& args) {
     Market::OrderInfo oInfo = Market::OrderInfo();
-    if (!MarketDB::GetOrderInfo(orderID, oInfo)) {
+    if (!m_db.GetOrderInfo(orderID, oInfo)) {
         _log(MARKET__ERROR, "ExecuteSellOrder - Failed to get info about sell order %u.", orderID);
         return;
     }
@@ -559,8 +559,8 @@ void MarketMgr::ExecuteSellOrder(Client* buyer, uint32 orderID, Call_PlaceCharOr
 
     if (orderConsumed) {
         _log(MARKET__TRACE, "ExecuteSellOrder - satisfied order #%u, deleting.", orderID);
-        PyRep* order = MarketDB::GetOrderRow(orderID);
-        if (!MarketDB::DeleteOrder(orderID)) {
+        PyRep* order = m_db.GetOrderRow(orderID);
+        if (!m_db.DeleteOrder(orderID)) {
             _log(MARKET__ERROR, "ExecuteSellOrder - Failed to delete order #%u.", orderID);
             return;
         }
@@ -569,7 +569,7 @@ void MarketMgr::ExecuteSellOrder(Client* buyer, uint32 orderID, Call_PlaceCharOr
     } else {
         uint32 newQty(oInfo.quantity - args.quantity);
         _log(MARKET__TRACE, "ExecuteSellOrder - Partially satisfied order #%u, altering quantity to %u.", orderID, newQty);
-        if (!MarketDB::AlterOrderQuantity(orderID, newQty)) {
+        if (!m_db.AlterOrderQuantity(orderID, newQty)) {
             _log(MARKET__ERROR, "ExecuteSellOrder - Failed to alter quantity of order #%u.", orderID);
             return;
         }
@@ -591,7 +591,7 @@ void MarketMgr::ExecuteSellOrder(Client* buyer, uint32 orderID, Call_PlaceCharOr
     data.regionID       = sDataMgr.GetStationRegion(args.stationID);
     data.typeID         = args.typeID;
 
-    if (!MarketDB::RecordTransaction(data)) {
+    if (!m_db.RecordTransaction(data)) {
         _log(MARKET__ERROR, "ExecuteSellOrder - Failed to record buy side of transaction.");
     }
 
@@ -599,7 +599,7 @@ void MarketMgr::ExecuteSellOrder(Client* buyer, uint32 orderID, Call_PlaceCharOr
     data.accountKey     = Account::KeyType::Cash;       // args.useCorp?accountKey: Account::KeyType::Cash;
     data.isBuy          = Market::Type::Sell;
     data.clientID       = oInfo.ownerID;
-    if (!MarketDB::RecordTransaction(data)) {
+    if (!m_db.RecordTransaction(data)) {
         _log(MARKET__ERROR, "ExecuteSellOrder - Failed to record sell side of transaction.");
     }
 }
@@ -931,7 +931,7 @@ void MarketMgr::GetCruPrices()
     sLog.Warning("     SetBasePrice", "Getting types.");
     std::map<uint16, Inv::TypeData> types;
     sDataMgr.GetTypes(types);           //19669 unique items in type data
-    sLog.Green("     SetBasePrice", "GetTypes returned %lu items.  Getting price avg.", types.size());
+    sLog.Green("     SetBasePrice", "GetTypes returned %u items.  Getting price avg.", types.size());
     // delete the typeID '0'
     types.erase(0);
 

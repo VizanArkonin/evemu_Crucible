@@ -40,6 +40,7 @@
 #include "ship/Ship.h"
 #include "ship/modules/ModuleManager.h"
 #include "system/SystemEntity.h"
+#include "system/SystemGPoint.h"
 
 #include "../eve-common/EVE_Missions.h"
 #include "../eve-common/EVE_Player.h"
@@ -69,13 +70,13 @@ class Client
 public:
     Client(PyServiceMgr &services, EVETCPConnection** con);
     // copy c'tor
-    Client(const Client& oth) =delete;
+    Client(const Client& oth) = delete;
     // move c'tor
-    Client(Client&& oth) =delete;
+    Client(Client&& oth) = delete;
     // copy assignment
-    Client& operator= (const Client& oth) =delete;
+    Client& operator= (const Client& oth) = delete;
     // move assignment
-    Client& operator= (Client&& oth) =delete;
+    Client& operator= (Client&& oth) = delete;
 
     ~Client();
 
@@ -148,10 +149,10 @@ public:
 
     uint32 GetShipID() const                            { return m_shipId; }
     uint32 GetLocationID() const                        { return m_locationID; }
-    uint32 GetSystemID() const                          { return m_systemData.systemID; }
-    uint32 GetConstellationID() const                   { return m_systemData.constellationID; }
-    uint32 GetRegionID() const                          { return m_systemData.regionID; }
-    std::string GetSystemName() const                   { return m_systemData.name; }
+    uint32 GetSystemID() const                          { return m_SystemData.systemID; }
+    uint32 GetConstellationID() const                   { return m_SystemData.constellationID; }
+    uint32 GetRegionID() const                          { return m_SystemData.regionID; }
+    std::string GetSystemName() const                   { return m_SystemData.name; }
 
     //  public functions to update client session when char's roles are changed
     void UpdateCorpSession(CorpData& data);
@@ -230,8 +231,7 @@ public:
     bool IsIdle()                                       { return (m_clientState == Player::State::Idle); }
     bool IsGateJump()                                   { return (m_clientState == Player::State::Jump); }
     bool IsDriveJump()                                  { return (m_clientState == Player::State::DriveJump); }
-    bool IsWormholeJump()                               { return (m_clientState == Player::State::WormholeJump); }
-    bool IsJump()                                       { return ((m_clientState == Player::State::DriveJump) or (m_clientState == Player::State::Jump) or (m_clientState == Player::State::WormholeJump)); } //Gate and Drive are both forms of jumping
+    bool IsJump()                                       { return ((m_clientState == Player::State::DriveJump) or (m_clientState == Player::State::Jump)); } //Gate and Drive are both forms of jumping
     bool IsBoard()                                      { return (m_clientState == Player::State::Board); }
     bool IsInvul()                                      { return m_invul; }
     bool IsLogin()                                      { return m_login; }
@@ -254,7 +254,6 @@ public:
     void SetBallPark();
     void StargateJump(uint32 fromGate, uint32 toGate);
     void CynoJump(InventoryItemRef beacon);
-    void WormholeJump(InventoryItemRef wormhole);
 
     bool IsAutoPilot()                                  { return m_autoPilot; }
     void SetAutoPilot(bool set=false);
@@ -315,7 +314,7 @@ public:
 
     // character notification messages
     void CharNowInStation();
-    void CharNoLongerInStation();       // clears m_StationData and remove char from station guestList
+    void CharNoLongerInStation();       // clears m_StationData
 
     // portrait stuff....
     bool RecPic()                                       { return m_portrait; }
@@ -334,14 +333,15 @@ public:
     void SetTrainingEndTime(int64 endTime)              { m_skillTimer = endTime; }
 
 protected:
+    Scan* m_scan;
     ServiceDB m_sDB;
-    StationData m_stationData;
-    SystemData m_systemData;
+    SystemData m_SystemData;
     ShipItemRef m_ship;
     ShipItemRef m_pod;
+    StationData m_StationData;
     CharacterRef m_char;
     PyServiceMgr& m_services;
-    Scan* m_scan;
+    SystemGPoint m_SGP;     // interface to my variable 3-d point generating system  (which isnt finished yet... -allan)
     ShipSE* pShipSE;
     TradeSession* m_TS;
     ClientSession* pSession;
@@ -349,7 +349,6 @@ protected:
 
     void ExecuteJump();
     void ExecuteDriveJump();
-    void ExecuteWormholeJump();
     void DestroyShipSE();
 
     //void _AwardBounty(SystemEntity *who);
@@ -394,9 +393,7 @@ protected:
     Timer m_sessionTimer;    // used to prevent multiple session changes from occurring too fast
     Timer m_ballparkTimer;   // this is to properly send SetState data after a delay (cant do it correctly otherwise)
 
-    // this is GPoint on jump and dock heading on undock
     GPoint m_movePoint;
-    // dock location in space (absolute)
     GPoint m_dockPoint;
 
     std::set<LSCChannel*>   m_channels;    //we do not own these.

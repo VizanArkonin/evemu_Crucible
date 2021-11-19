@@ -26,7 +26,6 @@
 
 #include "Client.h"
 #include "EVEServerConfig.h"
-#include "math/Trig.h"
 #include "planet/Colony.h"
 #include "planet/Planet.h"
 #include "planet/PlanetMgr.h"

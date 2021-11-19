@@ -38,6 +38,7 @@
 class ShaModule
 {
 public:
+
     /* ------------------------------------------------------------------------
      *
      * Majority of this code is part of Python. The original

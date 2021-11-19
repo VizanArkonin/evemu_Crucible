@@ -77,34 +77,15 @@ class WeaponSE;
 class ReactorSE;
 class JumpBridgeSE;
 class PlatformSE;
-class OutpostSE;
 
 /*
  * base class for all SystemEntities  - no TargetMgr or DestinyMgr
  * complete rewrite of entity class system  - allan  9 January 2016
- * finally added rule of 5.  -allan 4Nov21
  */
 class SystemEntity {
     friend class SystemBubble;    /* only to update m_bubble */
 public:
-    // default c'tor
     SystemEntity(InventoryItemRef self, PyServiceMgr &services, SystemManager* system);
-    // copy c'tor
-    SystemEntity(const SystemEntity* oth);
-    // move c'tor
-    SystemEntity(SystemEntity&& oth) noexcept
-    : SystemEntity(oth.GetSelf(), oth.GetServices(), oth.m_system) {
-        std::swap(*this, oth);
-    }
-    // copy assignment
-    SystemEntity& operator=(SystemEntity oth) {
-        std::swap(*this, oth);
-        return *this;
-    }
-    // move assignment
-    //SystemEntity& operator=(SystemEntity&& oth) =delete;
-
-    // d'tor
     virtual ~SystemEntity()                             { /* do nothing here */ }
 
     /* Process Calls - Overridden as needed in derived classes */
@@ -136,7 +117,7 @@ public:
     virtual StructureSE*        GetPOSSE()              { return nullptr; }
     virtual StructureSE*        GetJammerSE()           { return nullptr; }
     virtual JumpBridgeSE*       GetJumpBridgeSE()       { return nullptr; }
-    virtual OutpostSE*          GetOutpostSE()          { return nullptr; }
+    virtual StructureSE*        GetOutpostSE()          { return nullptr; }
     virtual PlatformSE*         GetPlatformSE()         { return nullptr; }
     virtual TowerSE*            GetTowerSE()            { return nullptr; }
     virtual ArraySE*            GetArraySE()            { return nullptr; }
@@ -249,20 +230,20 @@ public:
     /* public generic functions handled in base class. */
     void                        DropLoot(WreckContainerRef wreckRef, uint32 groupID, uint32 owner);
     void                        AwardSecurityStatus(InventoryItemRef iRef, Character* pChar);
+    void                        SendDamageStateChanged();  /* this uses targetMgr update to send to all interested parties */
     bool                        ApplyDamage(Damage &d); /* This method is defined in Damage.cpp */
     double                      DistanceTo2(const SystemEntity* other);
     PyTuple*                    MakeDamageState();
 
     /* public specific functions handled in base class. */
     virtual void                Abandon();
-    virtual void                SendDamageStateChanged();  /* this uses targetMgr update to send to all interested parties */
 
     /* generic functions handled here, but set elsewhere */
-    bool                        IsDead()                { return m_killed; }
+    const bool                  IsDead()                { return m_killed; }
     const GVector&              GetVelocity()           { return (m_destiny != nullptr ? m_destiny->GetVelocity() : NULL_ORIGIN_V); }
 
     /* virtual functions default to base class and overridden as needed */
-    virtual void                Killed(Damage &damage);
+    virtual void                Killed(Damage &fatal_blow);
     virtual void                EncodeDestiny(Buffer& into);
     virtual void                MakeDamageState(DoDestinyDamageState &into);
     virtual PyDict*             MakeSlimItem();
@@ -311,22 +292,7 @@ protected:
  *- no TargetMgr or DestinyMgr*/
 class StaticSystemEntity : public SystemEntity {
 public:
-    // default c'tor
     StaticSystemEntity(InventoryItemRef self, PyServiceMgr &services, SystemManager* system);
-    // copy c'tor
-    StaticSystemEntity(const StaticSystemEntity* oth);
-    // move c'tor
-    /*
-    StaticSystemEntity(StaticSystemEntity&& oth) noexcept
-    : StaticSystemEntity(oth.GetSelf(), oth.GetServices(), oth.m_system) {
-        std::swap(*this, oth);
-    } */
-    // copy assignment
-    //StaticSystemEntity& operator=(StaticSystemEntity& oth) =delete;
-    // move assignment
-    //StaticSystemEntity& operator=(StaticSystemEntity&& oth) =delete;
-
-    // d'tor
     virtual ~StaticSystemEntity()                       { /* Do nothing here */ }
 
     /* class type pointer querys. */
@@ -334,7 +300,6 @@ public:
     /* class type tests. */
     /* Base */
     virtual bool                isGlobal()              { return true; }    // just in case item->isGlobal() fails here...which it may
-    virtual bool                IsSystemEntity()        { return false; }
     virtual bool                IsInanimateSE()         { return true; }
     /* Static */
     virtual bool                IsStaticEntity()        { return true; }
@@ -351,28 +316,12 @@ class BeltSE
 : public StaticSystemEntity
 {
 public:
-    // default c'tor
     BeltSE(InventoryItemRef self, PyServiceMgr &services, SystemManager* system);
-    // copy c'tor
-    BeltSE(const BeltSE* oth);
-    // move c'tor
-    /*
-    BeltSE(BeltSE&& oth) noexcept
-    : BeltSE(oth.GetSelf(), oth.GetServices(), oth.m_system) {
-        std::swap(*this, oth);
-    } */
-    // copy assignment
-    //BeltSE& operator=(BeltSE& oth) =delete;
-    // move assignment
-    //BeltSE& operator=(BeltSE&& oth) =delete;
-
-    // d'tor
     virtual ~BeltSE()                                   { /* Do nothing here */ }
 
     /* class type pointer querys. */
     virtual BeltSE*             GetBeltSE()             { return this; }
     /* class type tests. */
-    virtual bool                IsSystemEntity()        { return false; }
     virtual bool                IsBeltSE()              { return true; }
 
     /* virtual functions to be overridden in derived classes */
@@ -392,28 +341,12 @@ class StargateSE
 : public StaticSystemEntity
 {
 public:
-    // default c'tor
     StargateSE(InventoryItemRef self, PyServiceMgr &services, SystemManager* system);
-    // copy c'tor
-    StargateSE(const StargateSE* oth);
-    // move c'tor
-    /*
-    StargateSE(StargateSE&& oth) noexcept
-    : StargateSE(oth.GetSelf(), oth.GetServices(), oth.m_system) {
-        std::swap(*this, oth);
-    } */
-    // copy assignment
-    //StargateSE& operator=(StargateSE& oth) =delete;
-    // move assignment
-    //StargateSE& operator=(StargateSE&& oth) =delete;
-
-    // d'tor
     virtual ~StargateSE()                               { /* Do nothing here */ }
 
     /* class type pointer querys. */
     virtual StargateSE*         GetGateSE()             { return this; }
     /* class type tests. */
-    virtual bool                IsSystemEntity()        { return false; }
     virtual bool                IsGateSE()              { return true; }
 
     /* SystemEntity interface */
@@ -438,32 +371,17 @@ protected:
  *- no TargetMgr or DestinyMgr*/
 class ItemSystemEntity : public SystemEntity {
 public:
-    // default c'tor
     ItemSystemEntity(InventoryItemRef self, PyServiceMgr &services, SystemManager* system);
-    // copy c'tor
-    ItemSystemEntity(const ItemSystemEntity* oth);
-    // move c'tor
-    /*
-    ItemSystemEntity(ItemSystemEntity&& oth) noexcept
-    : ItemSystemEntity(oth.GetSelf(), oth.GetServices(), oth.m_system) {
-        std::swap(*this, oth);
-    } */
-    // copy assignment
-    //ItemSystemEntity& operator=(ItemSystemEntity& oth) =delete;
-    // move assignment
-    //ItemSystemEntity& operator=(ItemSystemEntity&& oth) =delete;
-
-    // d'tor
     virtual ~ItemSystemEntity()                         { /* Do nothing here */ }
 
     /* class type pointer querys. */
     virtual ItemSystemEntity*   GetItemSE()             { return this; }
     /* class type tests. */
-    virtual bool                IsSystemEntity()        { return false; }
-    virtual bool                IsItemEntity()          { return true; }
     /* Base */
     //virtual bool                isGlobal()              { return false; }
     virtual bool                IsInanimateSE()         { return true; }
+    /* Item */
+    virtual bool                IsItemEntity()          { return true; }
 
     /* SystemEntity interface */
     virtual void                EncodeDestiny( Buffer& into );
@@ -480,24 +398,12 @@ class FieldSE
 : public ItemSystemEntity
 {
 public:
-    // default c'tor
     FieldSE(InventoryItemRef self, PyServiceMgr& services, SystemManager* system, const FactionData& data);
-    // copy c'tor
-    FieldSE(const FieldSE* oth);
-    // move c'tor
-    FieldSE(FieldSE&& oth) =delete;
-    // copy assignment
-    //FieldSE& operator=(FieldSE& oth) =delete;
-    // move assignment
-    //FieldSE& operator=(FieldSE&& oth) =delete;
-
-    // d'tor
     virtual ~FieldSE()                             { /* Do nothing here */ }
 
     /* class type pointer querys. */
     virtual FieldSE*            GetFieldSE()            { return this; }
     /* class type tests. */
-    virtual bool                IsSystemEntity()        { return false; }
     virtual bool                IsFieldSE()             { return true; }
 
     /* SystemEntity interface */
@@ -511,28 +417,17 @@ public:
  *- has TargetMgr  has DestinyMgr*/
 class ObjectSystemEntity : public SystemEntity {
 public:
-    // default c'tor
     ObjectSystemEntity(InventoryItemRef self, PyServiceMgr &services, SystemManager* system);
-    // copy c'tor
-    ObjectSystemEntity(const ObjectSystemEntity* oth);
-    // move c'tor
-    ObjectSystemEntity(ObjectSystemEntity&& oth) =delete;
-    // copy assignment
-    //ObjectSystemEntity& operator=(ObjectSystemEntity& oth) =delete;
-    // move assignment
-    //ObjectSystemEntity& operator=(ObjectSystemEntity&& oth) =delete;
-
-    // d'tor
     virtual ~ObjectSystemEntity();
 
     /* class type pointer querys. */
     virtual ObjectSystemEntity* GetObjectSE()           { return this; }
     /* class type tests. */
-    virtual bool                IsSystemEntity()        { return false; }
-    virtual bool                IsObjectEntity()        { return true; }
     /* Base */
     //virtual bool                isGlobal()              { return false; }
     virtual bool                IsInanimateSE()         { return true; }
+    /* Object */
+    virtual bool                IsObjectEntity()        { return true; }
 
     /* SystemEntity interface */
     virtual void                UpdateDamage();
@@ -542,7 +437,7 @@ public:
     virtual PyDict*             MakeSlimItem();
 
     /* virtual functions default to base class and overridden as needed */
-    virtual void                Killed(Damage &damage);
+    virtual void                Killed(Damage &fatal_blow);
     virtual bool                IsInvul()               { return m_invul; }
 
     /* specific functions handled here. */
@@ -557,24 +452,12 @@ class DeployableSE
 : public ObjectSystemEntity
 {
 public:
-    // default c'tor
     DeployableSE(InventoryItemRef self, PyServiceMgr& services, SystemManager* system, const FactionData& data);
-    // copy c'tor
-    DeployableSE(const DeployableSE* oth);
-    // move c'tor
-    DeployableSE(DeployableSE&& oth) =delete;
-    // copy assignment
-    //DeployableSE& operator=(DeployableSE& oth) =delete;
-    // move assignment
-    //DeployableSE& operator=(DeployableSE&& oth) =delete;
-
-    // d'tor
     virtual ~DeployableSE()                             { /* Do nothing here */ }
 
     /* class type pointer querys. */
     virtual DeployableSE*       GetDeployableSE()       { return this; }
     /* class type tests. */
-    virtual bool                IsSystemEntity()        { return false; }
     virtual bool                IsDeployableSE()        { return true; }
 };
 
@@ -585,27 +468,16 @@ public:
  * - has TargetMgr and DestinyMgr*/
 class DynamicSystemEntity : public SystemEntity {
 public:
-    // default c'tor
     DynamicSystemEntity(InventoryItemRef self, PyServiceMgr &services, SystemManager* system);
-    // copy c'tor
-    DynamicSystemEntity(const DynamicSystemEntity* oth);
-    // move c'tor
-    DynamicSystemEntity(DynamicSystemEntity&& oth) =delete;
-    // copy assignment
-    //DynamicSystemEntity& operator=(DynamicSystemEntity& oth) =delete;
-    // move assignment
-    //DynamicSystemEntity& operator=(DynamicSystemEntity&& oth) =delete;
-
-    // d'tor
     virtual ~DynamicSystemEntity();
 
     /* class type pointer querys. */
     virtual DynamicSystemEntity* GetDynamicSE()         { return this; }
     /* class type tests. */
-    virtual bool                IsSystemEntity()        { return false; }
-    virtual bool                IsDynamicEntity()       { return true; }
     /* Base */
     //virtual bool                isGlobal()              { return false; }
+    /* Dynamic */
+    virtual bool                IsDynamicEntity()       { return true; }
 
     /* SystemEntity interface */
     virtual void                UpdateDamage();

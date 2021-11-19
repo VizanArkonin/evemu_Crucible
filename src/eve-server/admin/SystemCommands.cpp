@@ -17,7 +17,6 @@
 #include "inventory/InventoryItem.h"
 #include "manufacturing/Blueprint.h"
 #include "map/MapConnections.h"
-#include "map/MapData.h"
 #include "npc/Drone.h"
 #include "system/Damage.h"
 #include "system/DestinyManager.h"
@@ -135,7 +134,7 @@ PyResult Command_tr(Client* pClient, CommandDB* db, PyServiceMgr* services, cons
                 pOtherClient = sEntityList.FindClientByCharID(objectID);
             } else if (IsPlayerItem(objectID)) {
                 // get object's ownerID...this is rather powerful.
-                InventoryItemRef iRef = sItemFactory.GetItemRef(objectID);
+                InventoryItemRef iRef = sItemFactory.GetItem(objectID);
                 if (iRef.get() == nullptr)
                     throw CustomError ("Translocate: Invalid Arguments - target object was not found.");
                 pOtherClient = sEntityList.FindClientByCharID(iRef->ownerID());
@@ -195,11 +194,13 @@ PyResult Command_tr(Client* pClient, CommandDB* db, PyServiceMgr* services, cons
                 locationID = pClient->GetDockStationID();
         } else if (strcmp(args.arg(2).c_str(), "moon") == 0) {
             // random moon in <me|player> current system
-            pt = sMapData.GetRandPointOnMoon(pOtherClient == nullptr ? pClient->GetSystemID() : pOtherClient->GetSystemID());
+            SystemGPoint sGP;
+            pt = sGP.GetRandPointOnMoon(pOtherClient == nullptr ? pClient->GetSystemID() : pOtherClient->GetSystemID());
             //throw CustomError ("Translocate: This option is Incomplete");
         } else if (strcmp(args.arg(2).c_str(), "planet") == 0) {
             // random planet in <me|player> current system
-            pt = sMapData.GetRandPointOnPlanet(pOtherClient == nullptr ? pClient->GetSystemID() : pOtherClient->GetSystemID());
+            SystemGPoint sGP;
+            pt = sGP.GetRandPointOnPlanet(pOtherClient == nullptr ? pClient->GetSystemID() : pOtherClient->GetSystemID());
             //throw CustomError ("Translocate: This option is Incomplete");
         } else {
             if (me) {
@@ -288,11 +289,13 @@ PyResult Command_tr(Client* pClient, CommandDB* db, PyServiceMgr* services, cons
                 locationID = pClient->GetDockStationID();
         } else if (strcmp(args.arg(2).c_str(), "moon") == 0) {
             // random moon in client current system
-            pt = sMapData.GetRandPointOnMoon(pOtherClient == nullptr ? pClient->GetSystemID() : pOtherClient->GetSystemID());
+            SystemGPoint sGP;
+            pt = sGP.GetRandPointOnMoon(pOtherClient == nullptr ? pClient->GetSystemID() : pOtherClient->GetSystemID());
             //throw CustomError ("Translocate: This option is Incomplete");
         } else if (strcmp(args.arg(2).c_str(), "planet") == 0) {
             // random planet in client current system
-            pt = sMapData.GetRandPointOnPlanet(pOtherClient == nullptr ? pClient->GetSystemID() : pOtherClient->GetSystemID());
+            SystemGPoint sGP;
+            pt = sGP.GetRandPointOnPlanet(pOtherClient == nullptr ? pClient->GetSystemID() : pOtherClient->GetSystemID());
             //throw CustomError ("Translocate: This option is Incomplete");
         } else {
             // what are we missing?
@@ -315,11 +318,13 @@ PyResult Command_tr(Client* pClient, CommandDB* db, PyServiceMgr* services, cons
                 locationID = pClient->GetDockStationID();
         } else if (strcmp(args.arg(3).c_str(), "moon") == 0) {
             // random moon in client current system
-            pt = sMapData.GetRandPointOnMoon(pOtherClient == nullptr ? pClient->GetSystemID() : pOtherClient->GetSystemID());
+            SystemGPoint sGP;
+            pt = sGP.GetRandPointOnMoon(pOtherClient == nullptr ? pClient->GetSystemID() : pOtherClient->GetSystemID());
             //throw CustomError ("Translocate: This option is Incomplete");
         } else if (strcmp(args.arg(3).c_str(), "planet") == 0) {
             // random planet in client current system
-            pt = sMapData.GetRandPointOnPlanet(pOtherClient == nullptr ? pClient->GetSystemID() : pOtherClient->GetSystemID());
+            SystemGPoint sGP;
+            pt = sGP.GetRandPointOnPlanet(pOtherClient == nullptr ? pClient->GetSystemID() : pOtherClient->GetSystemID());
             //throw CustomError ("Translocate: This option is Incomplete");
         } else {
             // what are we missing?
@@ -375,7 +380,7 @@ PyResult Command_tr(Client* pClient, CommandDB* db, PyServiceMgr* services, cons
     if (IsPlayerItem(locationID)) {
         // locationID is sent as player item.  this can be any celestial object, ship, pos, jetcan, wreck, etc.
         // this will take a lil bit of doing to get booleans right.
-        InventoryItemRef iRef = sItemFactory.GetItemRef(locationID);
+        InventoryItemRef iRef = sItemFactory.GetItem(locationID);
         if (item) { // tr to ship/item location
             pt = iRef->position();
             locationID = iRef->locationID();
@@ -494,101 +499,11 @@ static PyResult generic_createitem(Client *pClient, CommandDB *db, PyServiceMgr 
     return new PyInt(iRef.get()->itemID());
 }
 
-static PyResult generic_loaditem(Client *pClient, CommandDB *db, PyServiceMgr *services, const Seperator &args) {
-    int typeID = -1;
-    if (args.isNumber(2)) {
-        typeID = atoi(args.arg(2).c_str());
-    } else {
-        // this hits db directly, so test for possible sql injection code
-        for (const auto cur : badCharsSearch)
-            if (EvE::icontains(args.arg(2), cur))
-                throw CustomError ("Name contains invalid characters");
-        std::map<uint32_t, std::string> matches;
-        if (!db->ItemSearch(args.arg(2).c_str(), matches))
-            throw CustomError ("Item not found");
-
-        if (matches.size() > 1) {
-            auto c = matches.begin();
-            auto e = matches.end();
-            for (; c != e; c++) {
-                _log(COMMAND__MESSAGE, "Got match: %s\n", c->second.c_str());
-
-                // POSIX standard btw
-                if (strcasecmp(c->second.c_str(), args.arg(2).c_str()) == 0)
-                    typeID = c->first;
-            }
-            if (typeID == -1)
-                throw CustomError ("Item name is ambiguous.  Please use a full item name");
-
-        } else if (matches.size() == 1) {
-            auto cur = matches.begin();
-            _log(COMMAND__MESSAGE,
-                 "ItemSearch returned type: \"%s\" given \"%s\"\n",
-                 cur->second.c_str(), args.arg(2).c_str());
-            typeID = cur->first;
-        }
-    }
-    if (typeID == -1)
-        throw CustomError ("Unable to find valid type to create");
-
-    if (typeID < 34)
-        throw CustomError ("Invalid Type ID.");
-
-    int qty = 1;
-    if (3 < args.argCount()) {
-        if (args.isNumber(3))
-            qty = atoi(args.arg(3).c_str());
-    }
-
-    _log(COMMAND__MESSAGE, "Create %s %u times", args.arg(2).c_str(), qty);
-
-    //create into their cargo hold unless they are docked in a station,
-    //then stick it in their hangar instead.
-    uint32 locationID = 0;
-    EVEItemFlags flag;
-    if (pClient->IsInSpace()) {
-        locationID = pClient->GetShipID();
-        flag = flagCargoHold;
-    } else {
-        locationID = pClient->GetStationID();
-        flag = flagHangar;
-    }
-
-    ItemData idata(
-        typeID,
-        pClient->GetCharacterID(),
-                   locTemp, //temp location
-                   flag,
-                   qty
-    );
-
-    InventoryItemRef iRef = sItemFactory.SpawnItem(idata);
-    if (iRef.get() == nullptr)
-        throw CustomError ("Unable to create item of type %s.", args.arg(2).c_str());
-
-    //Move to location
-    if (pClient->IsInSpace())
-        pClient->GetShip()->AddItemByFlag(flag, iRef);
-    else
-        iRef->Move(locationID, flag, true);
-
-    iRef->SaveItem();
-
-    return new PyInt(iRef.get()->itemID());
-}
-
 PyResult Command_create(Client* pClient, CommandDB* db, PyServiceMgr* services, const Seperator& args) {
     if (args.argCount() < 2) {
         throw CustomError ("Correct Usage: /create [typeID|\"Type Name\"] [qty] [where]");
     }
     return generic_createitem(pClient, db, services, args);
-}
-
-PyResult Command_load(Client* pClient, CommandDB* db, PyServiceMgr* services, const Seperator& args) {
-    if (args.argCount() < 3) {
-        throw CustomError ("Correct Usage: /load me [typeID|\"Type Name\"] [qty] [where]");
-    }
-    return generic_loaditem(pClient, db, services, args);
 }
 
 PyResult Command_createitem(Client* pClient, CommandDB* db, PyServiceMgr* services, const Seperator& args) {
@@ -607,25 +522,25 @@ PyResult Command_kill(Client* pClient, CommandDB* db, PyServiceMgr* services, co
         }
         int entity = atoi(args.arg(1).c_str());
 
-        ShipItemRef sRef = sItemFactory.GetShipRef(entity);
-        if (sRef.get() == NULL)
+        InventoryItemRef itemRef = sItemFactory.GetShip(entity);
+        if (itemRef.get() == NULL)
             throw CustomError ("/kill NOT supported on non-ship types at this time");
 
         SystemEntity* shipEntity = pClient->SystemMgr()->GetSE(entity);
         if (shipEntity == nullptr) {
             throw CustomError ("/kill cannot process this object");
-            sLog.Error("GMCommands - Command_kill()", "Cannot process this object, aborting kill: %s [%u]", sRef->name(), sRef->itemID());
+            sLog.Error("GMCommands - Command_kill()", "Cannot process this object, aborting kill: %s [%u]", itemRef->name(), itemRef->itemID());
         } else {
             pClient->SystemMgr()->RemoveEntity(shipEntity);
             if (shipEntity->IsNPCSE()) {
                 NPC* npcEntity = shipEntity->GetNPCSE();
-                Damage damage(pClient->GetShipSE(),true);
-                npcEntity->Killed(damage);
+                Damage fatal_blow(pClient->GetShipSE(),true);
+                npcEntity->Killed(fatal_blow);
                 delete npcEntity;
             } else {
-                Damage damage(pClient->GetShipSE(),true);
-                shipEntity->Killed(damage);
-                sRef->Delete();
+                Damage fatal_blow(pClient->GetShipSE(),true);
+                shipEntity->Killed(fatal_blow);
+                itemRef->Delete();
             }
         }
     } else
@@ -651,8 +566,8 @@ PyResult Command_killallnpcs(Client* pClient, CommandDB* db, PyServiceMgr* servi
         if (cur.second == nullptr)
             continue;
         if (cur.second->IsNPCSE()) {
-            Damage damage(pClient->GetShipSE(),true);
-            cur.second->GetNPCSE()->Killed(damage);
+            Damage fatal_blow(pClient->GetShipSE(),true);
+            cur.second->GetNPCSE()->Killed(fatal_blow);
         }
     }
 
@@ -700,7 +615,7 @@ PyResult Command_unspawn(Client* pClient, CommandDB* db, PyServiceMgr* services,
     }
 
     if (target != 0) {
-        InventoryItemRef item_ref = sItemFactory.GetItemRef(target);
+        InventoryItemRef item_ref = sItemFactory.GetItem(target);
         SystemEntity *sys_entity = pClient->SystemMgr()->GetSE(target);
         if (sys_entity == nullptr) {
             throw CustomError ("/unspawn failed.  Item %u not found.", target);

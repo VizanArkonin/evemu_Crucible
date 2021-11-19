@@ -52,8 +52,7 @@ namespace Player {
             Board       = 7,
             Login       = 8,
             Uncloak     = 9,
-            DriveJump   = 10,
-            WormholeJump = 11,
+            DriveJump   = 10
         };
     }
 }

@@ -116,7 +116,7 @@ void DroneSE::SetOwner(Client* pClient) {
 void DroneSE::Process() {
     if (m_killed)
         return;
-    double profileStartTime(GetTimeUSeconds());
+    double profileStartTime = GetTimeUSeconds();
 
     /*  Enable base call to Process Targeting and Movement  */
     SystemEntity::Process();
@@ -368,13 +368,13 @@ void DroneSE::SetResists() {
     if (!m_self->HasAttribute(AttrThermalDamageResonance)) m_self->SetAttribute(AttrThermalDamageResonance, EvilOne, false);
 }
 
-void DroneSE::Killed(Damage &damage) {
+void DroneSE::Killed(Damage &fatal_blow) {
     if ((m_bubble == nullptr) or (m_destiny == nullptr) or (m_system == nullptr))
         return; // make error here?
 
     uint32 killerID = 0;
     Client* pClient(nullptr);
-    SystemEntity *killer(damage.srcSE);
+    SystemEntity *killer(fatal_blow.srcSE);
 
     if (killer->HasPilot()) {
         pClient = killer->GetPilot();

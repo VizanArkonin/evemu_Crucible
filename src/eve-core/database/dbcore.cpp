@@ -51,10 +51,7 @@ DBcore::DBcore()
 pSocket(false),
 pStatus(Closed),
 pReconnect(false),
-pProfile(false),
-pCompress(false),
-pSSL(false),
-pPort(3306)
+pProfile(false)
 {
     mysql_thread_init();    // this is for each thread used for db connections
     mysql = mysql_init(nullptr);
@@ -572,7 +569,7 @@ bool DBQueryResult::GetRow( DBResultRow& into )
 const char* DBQueryResult::ColumnName( uint32 index ) const
 {
     if (index >= mColumnCount) {
-        _log(DATABASE__ERROR,  "DBCore ColumnName: Column index %u exceeds number of columns in row (%u)", index, mColumnCount );
+        _log(DATABASE__ERROR,  "DBCore ColumnName: Column index %d exceeds number of columns in row (%s)\n", index, mColumnCount );
         EvE::traceStack();
         return "(ERROR)";
     }
@@ -583,7 +580,7 @@ const char* DBQueryResult::ColumnName( uint32 index ) const
 DBTYPE DBQueryResult::ColumnType( uint32 index ) const
 {
     if (index >= mColumnCount) {
-        _log(DATABASE__ERROR,  "DBCore ColumnType: Column index %u exceeds number of columns in row (%u)", index, mColumnCount );
+        _log(DATABASE__ERROR,  "DBCore ColumnType: Column index %d exceeds number of columns in row (%s)\n", index, mColumnCount );
         EvE::traceStack();
         return DBTYPE_STR;
     }

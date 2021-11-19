@@ -10,12 +10,15 @@
 
 #include "Client.h"
 #include "EntityList.h"
-#include "map/MapDB.h"
+#include "EVEServerConfig.h"
+#include "StaticDataMgr.h"
 #include "npc/Sentry.h"
 #include "npc/SentryAI.h"
 #include "system/Container.h"
 #include "system/Damage.h"
+#include "system/SystemBubble.h"
 #include "system/SystemManager.h"
+#include "system/cosmicMgrs/AnomalyMgr.h"
 
 
 Sentry::Sentry(InventoryItemRef self, PyServiceMgr& services, SystemManager* system, const FactionData& data)
@@ -61,7 +64,7 @@ Sentry::~Sentry() {
 void Sentry::Process() {
     if (m_killed)
         return;
-    double profileStartTime(GetTimeUSeconds());
+    double profileStartTime = GetTimeUSeconds();
 
     /*  Enable base call to Process Targeting and Movement  */
     SystemEntity::Process();
@@ -133,13 +136,13 @@ void Sentry::SetResists() {
     if (!m_self->HasAttribute(AttrThermalDamageResonance)) m_self->SetAttribute(AttrThermalDamageResonance, EvilOne, false);
 }
 
-void Sentry::Killed(Damage &damage) {
+void Sentry::Killed(Damage &fatal_blow) {
     if ((m_bubble == nullptr) or (m_destiny == nullptr) or (m_system == nullptr))
         return; // make error here?
 
     uint32 killerID = 0;
     Client* pClient(nullptr);
-    SystemEntity* killer = damage.srcSE;
+    SystemEntity* killer = fatal_blow.srcSE;
 
     if (killer->HasPilot()) {
         pClient = killer->GetPilot();
@@ -191,9 +194,6 @@ void Sentry::Killed(Damage &damage) {
         _log(PHYSICS__TRACE, "Sentry::Killed() - Sentry %s(%u) Position: %.2f,%.2f,%.2f.  Wreck %s(%u) Position: %.2f,%.2f,%.2f.", \
         GetName(), GetID(), x(), y(), z(), wreckItemRef->name(), wreckItemRef->itemID(), wreckPosition.x, wreckPosition.y, wreckPosition.z);
 
-    if (MakeRandomFloat() < sConfig.npc.LootDropChance)
-        DropLoot(wreckItemRef, m_self->groupID(), killerID);
-
     DBSystemDynamicEntity wreckEntity = DBSystemDynamicEntity();
         wreckEntity.allianceID = killer->GetAllianceID();
         wreckEntity.categoryID = EVEDB::invCategories::Celestial;
@@ -212,4 +212,7 @@ void Sentry::Killed(Damage &damage) {
         return;
     }
     m_destiny->SendJettisonPacket();
+
+    if (MakeRandomFloat() < sConfig.npc.LootDropChance)
+        DropLoot(wreckItemRef, m_self->groupID(), killerID);
 }

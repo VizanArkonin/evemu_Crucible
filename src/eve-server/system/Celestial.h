@@ -32,6 +32,26 @@
 #include "system/SystemEntity.h"
 
 /**
+ * Data container for celestial object.
+ */
+class CelestialObjectData
+{
+public:
+    CelestialObjectData(
+        double _radius = 0.0,
+        double _security = 0.0,
+        uint8 _celestialIndex = 0,
+        uint8 _orbitIndex = 0
+    );
+
+/* these have to be public for inventorydb to load into them */
+    double radius;
+    double security;
+    uint8 celestialIndex;
+    uint8 orbitIndex;
+};
+
+/**
  * InventoryItem for generic celestial object.
  */
 class CelestialObject
@@ -48,10 +68,10 @@ public:
 
     void Delete();
 
-    double      radius() const                          { return m_radius; }
-    double      security() const                        { return m_security; }
-    uint8       celestialIndex() const                  { return m_celestialIndex; }
-    uint8       orbitIndex() const                      { return m_orbitIndex; }
+    double      radius() const { return m_radius; }
+    double      security() const { return m_security; }
+    uint8       celestialIndex() const { return m_celestialIndex; }
+    uint8       orbitIndex() const { return m_orbitIndex; }
 
 protected:
     using InventoryItem::_Load;
@@ -65,14 +85,14 @@ protected:
             _log(ITEM__ERROR, "Trying to load %s as Celestial.", sDataMgr.GetCategoryName(type.categoryID()));
             if (sConfig.debug.StackTrace)
                 EvE::traceStack();
-            return RefPtr<_Ty>(nullptr);
+            return RefPtr<_Ty>();
         }
 
         CelestialObjectData cData = CelestialObjectData();
-        if (!SystemDB::GetCelestialObjectData(celestialID, cData))
-            return RefPtr<_Ty>(nullptr);
+        if (!sItemFactory.db()->GetCelestialObject(celestialID, cData))
+            return RefPtr<_Ty>();
 
-        return CelestialObjectRef(new CelestialObject(celestialID, type, data, cData));
+        return CelestialObjectRef( new CelestialObject(celestialID, type, data, cData ) );
     }
 
     static uint32 CreateItemID( ItemData &data);
@@ -128,11 +148,10 @@ public:
     virtual ~WormholeSE()                               { /* Do nothing here */ }
 
     /* class type pointer querys. */
-    virtual WormholeSE*         GetWormholeSE()        { return this; }
+    virtual WormholeSE*          GetWormholeSE()        { return this; }
     /* class type tests. */
     /* Base */
     virtual bool                IsWormholeSE()          { return true; }
-    //virtual bool                GetDynamicSE()          { return this; }
 
     /* SystemEntity interface */
     virtual void                EncodeDestiny( Buffer& into );

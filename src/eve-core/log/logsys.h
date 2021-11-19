@@ -28,6 +28,7 @@
 #define LOGSYS_H_
 
 /*
+ *
  * Usage:
  *
  *  These are the main functions provided by logsys:
@@ -35,9 +36,16 @@
  *      - _hex(TYPE, data, length) - Log hex dump in any context.
  * Types are defined in logtypes.h
  *
+ *
+ *
+ *
  * this is very C-ish, not C++ish, but thats how I felt like writting it
  *
+ *
+ *
  */
+
+#include <execinfo.h>
 
 
 #define LOG_CATEGORY(category) LOG_ ##category ,

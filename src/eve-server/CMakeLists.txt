@@ -435,11 +435,12 @@ SET( pos_INCLUDE
      "${TARGET_INCLUDE_DIR}/pos/PosMgrDB.h"
      "${TARGET_INCLUDE_DIR}/pos/Structure.h"
      "${TARGET_INCLUDE_DIR}/pos/Tower.h"
-     "${TARGET_INCLUDE_DIR}/pos/Weapon.h"
+     "${TARGET_INCLUDE_DIR}/pos/Weapon.h" 
      "${TARGET_INCLUDE_DIR}/pos/JumpBridge.h"
-     "${TARGET_INCLUDE_DIR}/pos/sovStructures/TCU.h"
-     "${TARGET_INCLUDE_DIR}/pos/sovStructures/SBU.h"
-     "${TARGET_INCLUDE_DIR}/pos/sovStructures/IHub.h")
+     "${TARGET_INCLUDE_DIR}/pos/sovStructures/TCU.h" 
+     "${TARGET_INCLUDE_DIR}/pos/sovStructures/SBU.h" 
+     "${TARGET_INCLUDE_DIR}/pos/sovStructures/IHub.h"
+     "${TARGET_INCLUDE_DIR}/pos/Outpost.h")
 SET( pos_SOURCE
      "${TARGET_SOURCE_DIR}/pos/Array.cpp"
      "${TARGET_SOURCE_DIR}/pos/Battery.cpp"
@@ -452,7 +453,7 @@ SET( pos_SOURCE
      "${TARGET_SOURCE_DIR}/pos/Weapon.cpp"
      "${TARGET_SOURCE_DIR}/pos/JumpBridge.cpp"
      "${TARGET_SOURCE_DIR}/pos/sovStructures/TCU.cpp"
-     "${TARGET_SOURCE_DIR}/pos/sovStructures/SBU.cpp"
+     "${TARGET_SOURCE_DIR}/pos/sovStructures/SBU.cpp" 
      "${TARGET_SOURCE_DIR}/pos/sovStructures/IHub.cpp")
 
 SET( qaTools_INCLUDE
@@ -497,7 +498,7 @@ SET( ship_modules_INCLUDE
      "${TARGET_INCLUDE_DIR}/ship/modules/RigModule.h"
      "${TARGET_INCLUDE_DIR}/ship/modules/SubSystemModule.h"
      "${TARGET_INCLUDE_DIR}/ship/modules/TurretFormulas.h"
-     "${TARGET_INCLUDE_DIR}/ship/modules/TurretModule.h"
+     "${TARGET_INCLUDE_DIR}/ship/modules/TurretModule.h" 
      "${TARGET_INCLUDE_DIR}/ship/modules/CynoModule.h" )
 SET( ship_modules_SOURCE
      "${TARGET_SOURCE_DIR}/ship/modules/ActiveModule.cpp"
@@ -510,7 +511,7 @@ SET( ship_modules_SOURCE
      "${TARGET_SOURCE_DIR}/ship/modules/RigModule.cpp"
      "${TARGET_SOURCE_DIR}/ship/modules/SubSystemModule.cpp"
      "${TARGET_SOURCE_DIR}/ship/modules/TurretFormulas.cpp"
-     "${TARGET_SOURCE_DIR}/ship/modules/TurretModule.cpp"
+     "${TARGET_SOURCE_DIR}/ship/modules/TurretModule.cpp" 
      "${TARGET_SOURCE_DIR}/ship/modules/CynoModule.cpp" )
 
 SET( standing_INCLUDE
@@ -535,8 +536,7 @@ SET( station_INCLUDE
      "${TARGET_INCLUDE_DIR}/station/StationOffice.h"
      "${TARGET_INCLUDE_DIR}/station/StationService.h"
      "${TARGET_INCLUDE_DIR}/station/StationSvc.h"
-     "${TARGET_INCLUDE_DIR}/station/TradeService.h"
-     "${TARGET_INCLUDE_DIR}/station/Outpost.h"  )
+     "${TARGET_INCLUDE_DIR}/station/TradeService.h"  )
 SET( station_SOURCE
      "${TARGET_SOURCE_DIR}/station/HoloscreenMgrService.cpp"
      "${TARGET_SOURCE_DIR}/station/InsuranceService.cpp"
@@ -550,8 +550,7 @@ SET( station_SOURCE
      "${TARGET_SOURCE_DIR}/station/StationOffice.cpp"
      "${TARGET_SOURCE_DIR}/station/StationService.cpp"
      "${TARGET_SOURCE_DIR}/station/StationSvc.cpp"
-     "${TARGET_SOURCE_DIR}/station/TradeService.cpp"
-     "${TARGET_SOURCE_DIR}/station/Outpost.cpp" )
+     "${TARGET_SOURCE_DIR}/station/TradeService.cpp" )
 
 SET( system_INCLUDE
      "${TARGET_INCLUDE_DIR}/system/Asteroid.h"
@@ -573,6 +572,7 @@ SET( system_INCLUDE
      "${TARGET_INCLUDE_DIR}/system/SystemBubble.h"
      "${TARGET_INCLUDE_DIR}/system/SystemDB.h"
      "${TARGET_INCLUDE_DIR}/system/SystemEntity.h"
+     "${TARGET_INCLUDE_DIR}/system/SystemGPoint.h"
      "${TARGET_INCLUDE_DIR}/system/SystemManager.h"
      "${TARGET_INCLUDE_DIR}/system/TargetManager.h"
      "${TARGET_INCLUDE_DIR}/system/WorldSpaceServer.h"
@@ -597,6 +597,7 @@ SET( system_SOURCE
      "${TARGET_SOURCE_DIR}/system/SystemBubble.cpp"
      "${TARGET_SOURCE_DIR}/system/SystemDB.cpp"
      "${TARGET_SOURCE_DIR}/system/SystemEntity.cpp"
+     "${TARGET_SOURCE_DIR}/system/SystemGPoint.cpp"
      "${TARGET_SOURCE_DIR}/system/SystemManager.cpp"
      "${TARGET_SOURCE_DIR}/system/TargetManager.cpp"
      "${TARGET_SOURCE_DIR}/system/WorldSpaceServer.cpp"
@@ -604,12 +605,12 @@ SET( system_SOURCE
 
 SET( system_sov_INCLUDE
      "${TARGET_INCLUDE_DIR}/system/sov/SovereigntyMgrService.h"
-     "${TARGET_INCLUDE_DIR}/system/sov/SovereigntyDB.h"
+     "${TARGET_INCLUDE_DIR}/system/sov/SovereigntyDB.h" 
      "${TARGET_INCLUDE_DIR}/system/sov/SovereigntyDataMgr.h")
 
 SET( system_sov_SOURCE
      "${TARGET_SOURCE_DIR}/system/sov/SovereigntyMgrService.cpp"
-     "${TARGET_SOURCE_DIR}/system/sov/SovereigntyDB.cpp"
+     "${TARGET_SOURCE_DIR}/system/sov/SovereigntyDB.cpp" 
      "${TARGET_SOURCE_DIR}/system/sov/SovereigntyDataMgr.cpp")
 
 SET( system_managers_INCLUDE

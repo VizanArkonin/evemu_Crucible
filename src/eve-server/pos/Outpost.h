@@ -1,5 +1,5 @@
 /**
- * @name Outpost.h
+ * @name JumpBridge.h
  *   Class for Outposts.
  *
  * @Author:           James
@@ -13,7 +13,6 @@
 #include "pos/Structure.h"
 #include "station/Station.h"
 
-// Class for Construction Platform (egg)
 class PlatformSE
 : public StructureSE
 {
@@ -33,20 +32,5 @@ public:
 
 };
 
-// Class for Outpost (StationSE derivative)
-class OutpostSE
-: public StationSE
-{
-public:
-    OutpostSE(StationItemRef station, PyServiceMgr &services, SystemManager* system);
-    virtual ~OutpostSE()                                { /* Do nothing here */ }
-
-    /* class type pointer querys. */
-    virtual OutpostSE* GetOutpostSE()                   { return this; }
-    /* Static */
-    virtual bool IsOutpostSE()                          { return true; }
-
-    virtual void SpawnStationService(Client* pClient, StationData stData, uint32 serviceType);
-};
 
 #endif  // EVEMU_POS_OUTPOST_H_

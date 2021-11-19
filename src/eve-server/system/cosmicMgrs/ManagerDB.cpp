@@ -17,7 +17,7 @@ void ManagerDB::GetCategoryData(DBQueryResult& res) {
     if (!sDatabase.RunQuery(res, "SELECT categoryID, categoryName, description, published FROM invCategories"))
         codelog(DATABASE__ERROR, "Error in GetCategoryData query: %s.", res.error.c_str());
 
-    _log(DATABASE__RESULTS, "GetCategoryData returned %lu items", res.GetRowCount());
+    _log(DATABASE__RESULTS, "GetCategoryData returned %u items", res.GetRowCount());
 }
 
 void ManagerDB::GetGroupData(DBQueryResult& res)
@@ -38,7 +38,7 @@ void ManagerDB::GetGroupData(DBQueryResult& res)
         " FROM invGroups "))
         codelog(DATABASE__ERROR, "Error in GetGroupData query: %s.", res.error.c_str());
 
-    _log(DATABASE__RESULTS, "GetGroupData returned %lu items", res.GetRowCount());
+    _log(DATABASE__RESULTS, "GetGroupData returned %u items", res.GetRowCount());
 }
 
 void ManagerDB::GetTypeData(DBQueryResult& res)
@@ -64,7 +64,7 @@ void ManagerDB::GetTypeData(DBQueryResult& res)
         " LEFT JOIN invMetaTypes AS m USING (typeID)"))
         codelog(DATABASE__ERROR, "Error in GetTypeData query: %s.", res.error.c_str());
 
-    _log(DATABASE__RESULTS, "GetTypeData returned %lu items", res.GetRowCount());
+    _log(DATABASE__RESULTS, "GetTypeData returned %u items", res.GetRowCount());
 }
 
 void ManagerDB::GetSkillList(DBQueryResult& res)
@@ -72,15 +72,7 @@ void ManagerDB::GetSkillList(DBQueryResult& res)
     if (!sDatabase.RunQuery(res, "SELECT typeID, typeName FROM invTypes WHERE groupID IN (SELECT groupID FROM invGroups WHERE categoryID = 16)"))
         codelog(DATABASE__ERROR, "Error in GetSkillList query: %s", res.error.c_str());
 
-    _log(DATABASE__RESULTS, "GetSkillList returned %lu items", res.GetRowCount());
-}
-
-void ManagerDB::GetAttributeTypes(DBQueryResult& res)
-{
-    if (!sDatabase.RunQuery(res, "SELECT attributeID, attributeName, attributeCategory, displayName, categoryID FROM dgmAttributeTypes"))
-        codelog(DATABASE__ERROR, "Error in GetAttributeTypes query: %s", res.error.c_str());
-
-    _log(DATABASE__RESULTS, "GetAttributeTypes returned %lu items", res.GetRowCount());
+    _log(DATABASE__RESULTS, "GetSkillList returned %u items", res.GetRowCount());
 }
 
 void ManagerDB::GetTypeAttributes(DBQueryResult& res)
@@ -88,7 +80,7 @@ void ManagerDB::GetTypeAttributes(DBQueryResult& res)
     if (!sDatabase.RunQuery(res, "SELECT typeID, attributeID, valueInt, valueFloat FROM dgmTypeAttributes"))
         codelog(DATABASE__ERROR, "Error in GetTypeAttributes query: %s", res.error.c_str());
 
-    _log(DATABASE__RESULTS, "GetTypeAttributes returned %lu items", res.GetRowCount());
+    _log(DATABASE__RESULTS, "GetTypeAttributes returned %u items", res.GetRowCount());
 }
 
 void ManagerDB::LoadNPCCorpFactionData(DBQueryResult& res)
@@ -96,7 +88,7 @@ void ManagerDB::LoadNPCCorpFactionData(DBQueryResult& res)
     if (!sDatabase.RunQuery(res, "SELECT corporationID, factionID FROM crpNPCCorporations" ))
         codelog(DATABASE__ERROR, "Error in LoadCorpFactionData query: %s", res.error.c_str());
 
-    _log(DATABASE__RESULTS, "LoadCorpFactionData returned %lu items", res.GetRowCount());
+    _log(DATABASE__RESULTS, "LoadCorpFactionData returned %u items", res.GetRowCount());
 }
 
 PyObject *ManagerDB::GetEntryTypes() {
@@ -106,7 +98,7 @@ PyObject *ManagerDB::GetEntryTypes() {
         return nullptr;
     }
 
-    _log(DATABASE__RESULTS, "GetEntryTypes returned %lu items", res.GetRowCount());
+    _log(DATABASE__RESULTS, "GetEntryTypes returned %u items", res.GetRowCount());
 
     return DBResultToRowset(res);
 }
@@ -118,7 +110,7 @@ PyObject *ManagerDB::GetKeyMap() {
         return nullptr;
     }
 
-    _log(DATABASE__RESULTS, "GetKeyMap returned %lu items", res.GetRowCount());
+    _log(DATABASE__RESULTS, "GetKeyMap returned %u items", res.GetRowCount());
 
     return DBResultToRowset(res);
 }
@@ -130,7 +122,7 @@ PyObject* ManagerDB::GetBillTypes() {
         return nullptr;
     }
 
-    _log(DATABASE__RESULTS, "GetBillTypes returned %lu items", res.GetRowCount());
+    _log(DATABASE__RESULTS, "GetBillTypes returned %u items", res.GetRowCount());
 
     return DBResultToRowset(res);
 }
@@ -138,7 +130,7 @@ PyObject* ManagerDB::GetBillTypes() {
 PyObjectEx* ManagerDB::GetAgents() {
     // NOTE:  havent found data for agents in space yet....still looking.
     DBQueryResult res;
-    if (!sDatabase.RunQuery(res,
+    if(!sDatabase.RunQuery(res,
         "SELECT"
         "    agt.agentID,"
         "    agt.agentTypeID,"
@@ -158,7 +150,7 @@ PyObjectEx* ManagerDB::GetAgents() {
         return nullptr;
     }
 
-    _log(DATABASE__RESULTS, "GetAgents returned %lu items", res.GetRowCount());
+    _log(DATABASE__RESULTS, "GetAgents returned %u items", res.GetRowCount());
     return DBResultToCRowset(res);
 }
 
@@ -170,7 +162,7 @@ PyObjectEx *ManagerDB::GetOperands() {
         return nullptr;
     }
 
-    _log(DATABASE__RESULTS, "GetOperands returned %lu items", res.GetRowCount());
+    _log(DATABASE__RESULTS, "GetOperands returned %u items", res.GetRowCount());
 
     return DBResultToCIndexedRowset(res, "operandID");
 }
@@ -213,7 +205,7 @@ void ManagerDB::LoadFactionSystemCounts(std::map<uint32, uint32> &into) {
 void ManagerDB::LoadFactionRegions(std::map<int32, PyRep *> &into) {
     DBQueryResult res;
     //this is not quite right, but its good enough.
-    if (!sDatabase.RunQuery(res, "SELECT factionID,regionID FROM mapRegions WHERE factionID IS NOT NULL ORDER BY factionID"))
+    if (!sDatabase.RunQuery(res, "SELECT factionID,regionID FROM mapRegions WHERE factionID IS NOT NULL"))
     {
         codelog(DATABASE__ERROR, "Error in query: %s", res.error.c_str());
         return;
@@ -224,7 +216,7 @@ void ManagerDB::LoadFactionRegions(std::map<int32, PyRep *> &into) {
 void ManagerDB::LoadFactionConstellations(std::map<int32, PyRep *> &into) {
     DBQueryResult res;
     //this is not quite right, but its good enough.
-    if (!sDatabase.RunQuery(res, "SELECT factionID,constellationID FROM mapConstellations WHERE factionID IS NOT NULL ORDER BY factionID" ))
+    if (!sDatabase.RunQuery(res, "SELECT factionID,constellationID FROM mapConstellations WHERE factionID IS NOT NULL" ))
     {
         codelog(DATABASE__ERROR, "Error in query: %s", res.error.c_str());
         return;
@@ -235,7 +227,7 @@ void ManagerDB::LoadFactionConstellations(std::map<int32, PyRep *> &into) {
 void ManagerDB::LoadFactionSolarSystems(std::map<int32, PyRep *> &into) {
     DBQueryResult res;
     //this is not quite right, but its good enough.
-    if (!sDatabase.RunQuery(res, "SELECT factionID,solarSystemID FROM mapSolarSystems WHERE factionID IS NOT NULL ORDER BY factionID"))
+    if (!sDatabase.RunQuery(res, "SELECT factionID,solarSystemID FROM mapSolarSystems WHERE factionID IS NOT NULL"))
     {
         codelog(DATABASE__ERROR, "Error in query: %s", res.error.c_str());
         return;
@@ -246,7 +238,7 @@ void ManagerDB::LoadFactionSolarSystems(std::map<int32, PyRep *> &into) {
 void ManagerDB::LoadFactionRaces(std::map<int32, PyRep *> &into) {
     DBQueryResult res;
     //this is not quite right, but its good enough.
-    if (!sDatabase.RunQuery(res, "SELECT factionID,raceID FROM facRaces WHERE factionID IS NOT NULL ORDER BY factionID"))
+    if (!sDatabase.RunQuery(res, "SELECT factionID,raceID FROM facRaces WHERE factionID IS NOT NULL"))
     {
         codelog(DATABASE__ERROR, "Error in query: %s", res.error.c_str());
         return;
@@ -345,20 +337,10 @@ void ManagerDB::SaveAnomaly(CosmicSignature& sig)
 
 void ManagerDB::GetAnomalyList(DBQueryResult& res)
 {// sysSignatures (sigID,sigItemID,dungeonType,sigName,systemID,sigTypeID,sigGroupID,scanGroupID,scanAttributeID,x,y,z)
-    if (!sDatabase.RunQuery(res,
+    if(!sDatabase.RunQuery(res,
         "SELECT sigID,sigItemID,dungeonType,sigName,systemID,sigTypeID,sigGroupID,scanGroupID,scanAttributeID,x,y,z"
         " FROM sysSignatures"
         " ORDER BY systemid")) {
-        _log(DATABASE__ERROR, "Error in GetAnomalyList query: %s", res.error.c_str());
-        }
-}
-
-void ManagerDB::GetAnomaliesBySystem(uint32 systemID, DBQueryResult& res)
-{// sysSignatures (sigID,sigItemID,dungeonType,sigName,systemID,sigTypeID,sigGroupID,scanGroupID,scanAttributeID,x,y,z)
-    if (!sDatabase.RunQuery(res,
-        "SELECT sigID,sigItemID,dungeonType,sigName,systemID,sigTypeID,sigGroupID,scanGroupID,scanAttributeID,x,y,z"
-        " FROM sysSignatures"
-        " WHERE systemID = %u", systemID)) {
         _log(DATABASE__ERROR, "Error in GetAnomalyList query: %s", res.error.c_str());
         }
 }
@@ -382,7 +364,7 @@ GPoint ManagerDB::GetAnomalyPos(std::string& string)
 // these next two arent used yet.  dont remember what they were for.  persistant shit for restart?
 void ManagerDB::GetSystemAnomalies(uint32 systemID, DBQueryResult& res)
 {// sysSignatures (sigTypeID,scanGroupID,sigGroupID,scanAttributeID,sigName,sigID,x,y,z)
-    if (!sDatabase.RunQuery(res,
+    if(!sDatabase.RunQuery(res,
         "SELECT sigTypeID, scanGroupID, sigGroupID, scanAttributeID, sigName, sigID, x, y, z"
         " FROM sysSignatures"
         " WHERE systemID = %u", systemID)) {
@@ -496,7 +478,7 @@ void ManagerDB::CreateRoidItemID(ItemData& idata, AsteroidData& adata)
 bool ManagerDB::GetAsteroidData(uint32 asteroidID, AsteroidData& dbData)
 {
     DBQueryResult res;
-    if (!sDatabase.RunQuery(res,
+    if(!sDatabase.RunQuery(res,
         "SELECT itemName, typeID, systemID, beltID, quantity, radius, x, y, z"
         " FROM sysAsteroids"
         " WHERE itemID = %u", asteroidID)) {
@@ -526,7 +508,7 @@ bool ManagerDB::GetAsteroidData(uint32 asteroidID, AsteroidData& dbData)
 bool ManagerDB::LoadSystemRoids(uint32 systemID, uint32& beltID, std::vector< AsteroidData >& into)
 {
     DBQueryResult res;
-    if (!sDatabase.RunQuery(res,
+    if(!sDatabase.RunQuery(res,
         "SELECT itemID, itemName, typeID, systemID, beltID, quantity, radius, x, y, z"
         " FROM sysAsteroids"
         " WHERE systemID = %u"
@@ -535,7 +517,7 @@ bool ManagerDB::LoadSystemRoids(uint32 systemID, uint32& beltID, std::vector< As
         return false;
     }
 
-    _log(DATABASE__RESULTS, "LoadSystemRoids returned %lu items", res.GetRowCount());
+    _log(DATABASE__RESULTS, "LoadSystemRoids returned %u items", res.GetRowCount());
     DBResultRow row;
     while(res.GetRow(row)) {
         AsteroidData entry = AsteroidData();
@@ -564,7 +546,7 @@ void ManagerDB::ClearAsteroids()
 {
     DBerror err;
     sDatabase.RunQuery(err, "DELETE FROM sysAsteroids WHERE 1");
-    sDatabase.RunQuery(err, "ALTER TABLE sysAsteroids auto_increment = 450000000");
+    sDatabase.RunQuery(err, "ALTER TABLE `sysAsteroids` auto_increment = 450000000");
 }
 
 void ManagerDB::SaveRoid(AsteroidData& data)
@@ -673,7 +655,7 @@ bool ManagerDB::GetSavedDungeons(uint32 systemID, std::vector< Dungeon::ActiveDa
         return false;
     }
 
-    _log(DATABASE__RESULTS, "GetSavedDungeons returned %lu items", res.GetRowCount());
+    _log(DATABASE__RESULTS, "GetSavedDungeons returned %u items", res.GetRowCount());
     DBResultRow row;
     while(res.GetRow(row)) {
         Dungeon::ActiveData entry = Dungeon::ActiveData();
@@ -709,7 +691,7 @@ void ManagerDB::ClearDungeons()
 {
     DBerror err;
     sDatabase.RunQuery(err, "DELETE FROM dunActive WHERE 1");
-    sDatabase.RunQuery(err, "DELETE FROM sysSignatures WHERE dungeonType != 6 AND 1");
+    sDatabase.RunQuery(err, "DELETE FROM sysSignatures WHERE 1");
     // anomaly items are all temp, except roids, so we may not need this...
     sDatabase.RunQuery(err, "DELETE FROM entity_attributes WHERE itemID IN (SELECT itemID FROM entity WHERE customInfo LIKE 'Dungeon%%')");
     sDatabase.RunQuery(err, "DELETE FROM entity WHERE customInfo LIKE 'Dungeon%%'");
@@ -719,7 +701,7 @@ void ManagerDB::ClearDungeons(uint32 systemID)
 {
     DBerror err;
     sDatabase.RunQuery(err, "DELETE FROM dunActive WHERE systemID = %u", systemID);
-    sDatabase.RunQuery(err, "DELETE FROM sysSignatures WHERE dungeonType != 6 AND systemID = %u", systemID);
+    sDatabase.RunQuery(err, "DELETE FROM sysSignatures WHERE  systemID = %u", systemID);
     // anomaly items are all temp, except roids, so we may not need this...
     sDatabase.RunQuery(err, "DELETE FROM entity_attributes WHERE itemID IN (SELECT itemID FROM entity WHERE locationID = %u AND customInfo LIKE 'Dungeon%%')", systemID);
     sDatabase.RunQuery(err, "DELETE FROM entity WHERE locationID = %u AND customInfo LIKE 'Dungeon%%'", systemID);
@@ -763,51 +745,5 @@ void ManagerDB::UpdateStatisticHistory(StatisticData& data)
         data.oreMined, data.iskMarket, data.probesLaunched, data.sitesScanned ))
     {
         _log(DATABASE__ERROR, "srvStatisticHistory - unable to save data: %s", err.c_str());
-    }
-}
-
-void ManagerDB::GetWHClassDestinations(uint32 systemClass, DBQueryResult& res)
-{
-    if (!sDatabase.RunQuery(res,
-    "SELECT typeID "
-    "FROM mapWormholeDestinationClasses "
-    "WHERE class = %u", systemClass))
-    {
-        codelog(DATABASE__ERROR, "Error in GetWHDestinationClass query: %s", res.error.c_str());
-    }
-}
-
-void ManagerDB::GetWHClassSystems(uint32 systemClass, DBQueryResult& res)
-{
-    // For WH / nullsec systems, use this query
-    if (systemClass <= 6 or systemClass == 9) {
-        if (!sDatabase.RunQuery(res,
-        "SELECT solarSystemID,wormholeClassID FROM mapSolarSystems mss "
-        "INNER JOIN mapLocationWormholeClasses mlwc ON mss.regionID = mlwc.locationID "
-        "AND wormholeClassID = %u", systemClass))
-        {
-            codelog(DATABASE__ERROR, "Error in GetWHClassSystems(wh/ns) query: %s", res.error.c_str());
-        }
-    }
-    // For lowsec systems, use solarSystemID as mapped from mlwc table
-    else if (systemClass == 8) {
-        if (!sDatabase.RunQuery(res,
-        "SELECT solarSystemID,wormholeClassID FROM mapSolarSystems mss "
-        "INNER JOIN mapLocationWormholeClasses mlwc ON mss.solarSystemID = mlwc.locationID "
-        "AND wormholeClassID = %u", systemClass))
-        {
-            codelog(DATABASE__ERROR, "Error in GetWHClassSystems(ls) query: %s", res.error.c_str());
-        }
-    }
-    // For highsec systems, use all systems in the highsec regions excepting those with low security status
-    else if (systemClass == 7) {
-        if (!sDatabase.RunQuery(res,
-        "SELECT solarSystemID,wormholeClassID FROM mapSolarSystems mss "
-        "INNER JOIN mapLocationWormholeClasses mlwc ON mss.regionID = mlwc.locationID "
-        "WHERE solarSystemID NOT IN (SELECT locationID FROM mapLocationWormholeClasses mlwc2 WHERE mlwc2.wormholeClassID = 8) "
-        "AND wormholeClassID = %u", systemClass))
-        {
-            codelog(DATABASE__ERROR, "Error in GetWHClassSystems(hs) query: %s", res.error.c_str());
-        }
     }
 }

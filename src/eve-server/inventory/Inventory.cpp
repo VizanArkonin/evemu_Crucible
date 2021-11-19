@@ -182,7 +182,7 @@ bool Inventory::LoadContents() {
     for (auto cur : items) {
         if ((cur == od.ownerID) or (cur == od.locID) or (cur == m_myID))
             continue;
-        InventoryItemRef iRef = sItemFactory.GetItemRef(cur);
+        InventoryItemRef iRef = sItemFactory.GetItem(cur);
         if (iRef.get() == nullptr) {
             _log(INV__WARNING, "Inventory::LoadContents() - Failed to load item %u contained in %u. Skipping.", cur, m_myID);
             continue;
@@ -229,7 +229,7 @@ void Inventory::AddItem(InventoryItemRef iRef) {
 
     // Apply iHub upgrades
     if (m_self->typeID() == EVEDB::invTypes::InfrastructureHub) {
-        _log(SOV__DEBUG, "Applying system upgrade %s to system %s...", iRef->name(), m_self->name());
+        _log(SOV__DEBUG, "Applying system upgrade %s to system %s...", iRef->name(), m_self->locationID());
 
         // For now, all we need to do is mark the upgrade active,
         // but in the future upgrades for military and resource harvesting
@@ -273,10 +273,10 @@ void Inventory::DeleteContents()
     if (!mContentsLoaded)
         return;
     InventoryItemRef iRef(nullptr);
-    std::map<uint32, InventoryItemRef>::iterator itr = mContents.begin();
-    while (itr != mContents.end()) {
-        iRef = itr->second;
-        ++itr;
+    std::map<uint32, InventoryItemRef>::iterator cur = mContents.begin();
+    while (cur != mContents.end()) {
+        iRef = cur->second;
+        ++cur;
         iRef->Delete();
     }
 
@@ -405,7 +405,7 @@ std::vector<InventoryItemRef> Inventory::SortVector(std::vector<InventoryItemRef
     }
 
     if (sConfig.debug.IsTestServer)
-        _log(INV__TRACE, "Inventory::SortVector() - %lu items sorted in %.3fus with %u loops.", itemVec.size(), (GetTimeUSeconds() - start), count);
+        _log(INV__TRACE, "Inventory::SortVector() - %u items sorted in %.3fus with %u loops.", itemVec.size(), (GetTimeUSeconds() - start), count);
 
     return itemVec;  //returns sorted list
 }
@@ -439,7 +439,7 @@ InventoryItemRef Inventory::FindFirstByFlag(EVEItemFlags flag) const {
         return InventoryItemRef(nullptr);
 }
 
-InventoryItemRef Inventory::GetByTypeFlag(uint16 typeID, EVEItemFlags flag) const {
+InventoryItemRef Inventory::GetByTypeFlag(uint32 typeID, EVEItemFlags flag) const {
     auto range = m_contentsByFlag.equal_range(flag);
     for ( auto itr = range.first; itr != range.second; ++itr )
         if (itr->second->typeID() == typeID)
@@ -642,7 +642,7 @@ float Inventory::GetCapacity(EVEItemFlags flag) const {
     /** @todo  finish these for POS */
     //   IsFlagCapacityLocationWide   item.groupID in (const.groupCorporateHangarArray, const.groupAssemblyArray, const.groupMobileLaboratory):
 
-    switch (flag) {
+    switch( flag ) {
         case flagOffice:
         case flagProperty:
         //case flagDelivery:
@@ -683,7 +683,7 @@ float Inventory::GetCapacity(EVEItemFlags flag) const {
             //for ship, this is TOTAL capy for all corp hangars (they share capy)
             if (m_self->HasAttribute(AttrHasCorporateHangars))
                 return m_self->GetAttribute(AttrCorporateHangarCapacity).get_float();
-        } break;
+        }
         case flagHangar: {
             if (sDataMgr.IsStation(m_myID))
                 return maxHangarCapy;
@@ -691,7 +691,7 @@ float Inventory::GetCapacity(EVEItemFlags flag) const {
                 return m_self->GetAttribute(AttrCorporateHangarCapacity).get_float();
             //for cargo container, this is 27k5m3.
             return m_self->GetAttribute(AttrCapacity).get_float();
-        } break;
+        }
     }
 
     _log(INV__WARNING, "Inventory::GetCapacity() - Unsupported flag %s(%u) called for %s(%u)", \
@@ -766,7 +766,7 @@ bool Inventory::ValidateAddItem(EVEItemFlags flag, InventoryItemRef iRef) const
     }
 
     // check if where the item is coming from was a cargo container
-    InventoryItemRef cRef = sItemFactory.GetItemRef(iRef->locationID());
+    InventoryItemRef cRef = sItemFactory.GetItem(iRef->locationID());
     if (cRef->groupID() == EVEDB::invGroups::Cargo_Container && sDataMgr.IsSolarSystem(cRef->locationID())) {
         GVector direction (cRef->position(), pClient->GetShip()->position());
         float maxDistance(2500.0f);

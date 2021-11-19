@@ -1251,11 +1251,4 @@
     </tupleInline>
   </elementDef>
 
-  <elementDef name="Call_GetStationServiceAccessRule">
-    <tupleInline>
-      <int name="stationID" safe="true" />
-      <int name="serviceID" safe="true" />
-    </tupleInline>
-  </elementDef>
-
 </elements>

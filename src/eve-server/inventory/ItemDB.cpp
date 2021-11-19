@@ -25,13 +25,12 @@
 
 
 #include "eve-server.h"
-#include "StaticDataMgr.h"
 
 #include "inventory/ItemDB.h"
-#include "inventory/ItemType.h"
 
 
-bool ItemDB::GetItemData(uint32 itemID, ItemData &into) {
+bool ItemDB::GetItem(uint32 itemID, ItemData &into) {
+    /* called by RefPtr<_Ty> _Load() at InventoryItem.h:189 */
     DBQueryResult res;
 
     // For ranges of itemIDs we use specialized tables:
@@ -158,7 +157,7 @@ bool ItemDB::GetItemData(uint32 itemID, ItemData &into) {
     }
 
     DBResultRow row;
-    if (!res.GetRow(row)) {
+    if(!res.GetRow(row)) {
         _log(DATABASE__MESSAGE, "ItemDB::GetItem() - Item %u not found.", itemID);
         return false;
     }
@@ -193,7 +192,7 @@ uint32 ItemDB::NewItem(const ItemData &data) {
     sDatabase.DoEscapeString(nameEsc, data.name);
     sDatabase.DoEscapeString(customInfoEsc, data.customInfo);
 
-    if (!sDatabase.RunQueryLID(err, uid,
+    if(!sDatabase.RunQueryLID(err, uid,
         "INSERT INTO entity ("
         "   itemName, typeID, ownerID, locationID, flag,"
         "   contraband, singleton, quantity, x, y, z,"
@@ -233,7 +232,7 @@ bool ItemDB::SaveItem(uint32 itemID, const ItemData &data) {
     sDatabase.DoEscapeString(customInfoEsc, data.customInfo);
 
     DBerror err;
-    if (!sDatabase.RunQuery(err,
+    if(!sDatabase.RunQuery(err,
         "UPDATE entity"
         " SET"
         "  itemName = '%s',"
@@ -318,11 +317,9 @@ void ItemDB::SaveAttributes(bool isChar, std::vector<Inv::AttrData>& data)
         Inserts << "INSERT INTO chrCharacterAttributes";
         Inserts << " (charID, attributeID, valueInt, valueFloat)";
     } else {
-        //sDatabase.RunQuery(err, "DELETE FROM entity_attributes WHERE itemID = %u", data[0].itemID);
         Inserts << "INSERT INTO entity_attributes";
         Inserts << " (itemID, attributeID, valueInt, valueFloat)";
     }
-
     bool first(true);
     for (auto cur : data) {
         if (first) {
@@ -368,7 +365,9 @@ bool ItemDB::DeleteItem(uint32 itemID) {
 }
 
 void ItemDB::GetItems(uint16 catID, std::map< uint16, std::string >& typeIDs) {
+
     DBQueryResult res;
+
     if (!sDatabase.RunQuery(res,
         "SELECT"
         "  typeID,"

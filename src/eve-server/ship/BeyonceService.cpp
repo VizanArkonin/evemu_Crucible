@@ -830,7 +830,7 @@ PyResult BeyonceBound::Handle_CmdAbandonLoot(PyCallArgs &call) {
 	/*  remotePark.CmdAbandonLoot(wrecks)  <- this is pylist from 'abandonAllWrecks'
 	 *  remotePark.CmdAbandonLoot([wreckID]) <- single itemID in list
 	 */
-  sLog.White( "BeyonceBound::Handle_CmdAbandonLoot()", "size=%lu", call.tuple->size());
+  sLog.White( "BeyonceBound::Handle_CmdAbandonLoot()", "size=%li", call.tuple->size());
     call.Dump(SERVICE__CALL_DUMP);
 
 	Call_SingleIntList arg;
@@ -1000,10 +1000,10 @@ PyResult BeyonceBound::Handle_CmdJumpThroughCorporationStructure(PyCallArgs &cal
         return PyStatic.NewNone();
     }
 
-    InventoryItemRef beacon = sItemFactory.GetItemRefFromID(args.remoteStructureID);
+    InventoryItemRef beacon = sItemFactory.GetInventoryItemFromID(args.remoteStructureID);
 
     //Check for jump fuel and make sure there is enough fuel available
-    InventoryItemRef bridge = sItemFactory.GetItemRefFromID(args.itemID);
+    InventoryItemRef bridge = sItemFactory.GetInventoryItemFromID(args.itemID);
     ShipItemRef ship = call.client->GetShip();
 
     std::vector<InventoryItemRef> fuelBayItems;
@@ -1081,7 +1081,7 @@ PyResult BeyonceBound::Handle_CmdBeaconJumpFleet(PyCallArgs &call) {
         return PyStatic.NewNone();
     }
 
-    InventoryItemRef beacon = sItemFactory.GetItemRefFromID(args.beaconID);
+    InventoryItemRef beacon = sItemFactory.GetInventoryItemFromID(args.beaconID);
 
     //Check for jump fuel and make sure there is enough fuel available
     ShipItemRef ship = call.client->GetShip();
@@ -1120,7 +1120,7 @@ PyResult BeyonceBound::Handle_CmdBeaconJumpFleet(PyCallArgs &call) {
     }
     if (quantity < fuelQuantity) {
         ship->GetPilot()->SendNotifyMsg("This jump requires you to have %u units of %s in your fuel bay.", fuelQuantity, sItemFactory.GetType(fuelType)->name().c_str());
-        return PyStatic.NewNone();
+        return nullptr;
     }
 
     for (auto cur : requiredItems) {
@@ -1142,6 +1142,8 @@ PyResult BeyonceBound::Handle_CmdBeaconJumpFleet(PyCallArgs &call) {
     tuple->SetItem(0, new PyString(GetBindStr()));    // node info here
     tuple->SetItem(1, new PyLong(GetFileTimeNow()));
     return tuple;
+
+    return PyStatic.NewNone();
 }
 
 PyResult BeyonceBound::Handle_CmdBeaconJumpAlliance(PyCallArgs &call) {
@@ -1170,7 +1172,7 @@ PyResult BeyonceBound::Handle_CmdBeaconJumpAlliance(PyCallArgs &call) {
         return PyStatic.NewNone();
     }
 
-    InventoryItemRef beacon = sItemFactory.GetItemRefFromID(args.beaconID);
+    InventoryItemRef beacon = sItemFactory.GetInventoryItemFromID(args.beaconID);
 
     //Check for jump fuel and make sure there is enough fuel available
     ShipItemRef ship = call.client->GetShip();
@@ -1236,6 +1238,8 @@ PyResult BeyonceBound::Handle_CmdBeaconJumpAlliance(PyCallArgs &call) {
     tuple->SetItem(0, new PyString(GetBindStr()));    // node info here
     tuple->SetItem(1, new PyLong(GetFileTimeNow()));
     return tuple;
+
+    return PyStatic.NewNone();
 }
 
 PyResult BeyonceBound::Handle_CmdFleetRegroup(PyCallArgs &call) {

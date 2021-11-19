@@ -26,18 +26,21 @@
 #ifndef EVE_ITEM_FACTORY_H
 #define EVE_ITEM_FACTORY_H
 
+//#include "eve-compat.h"
 
 #include "utils/Singleton.h"
 #include "inventory/ItemRef.h"
+//#include "../../eve-common/EVE_RAM.h"
 
 
-struct CharacterData;
-struct CorpData;
-struct OfficeData;
-struct AsteroidData;
+class ItemType;
 
 class ItemData;
-class ItemType;
+class CharacterData;
+class CorpData;
+class OfficeData;
+class AsteroidData;
+
 class BlueprintType;
 class CharacterType;
 class StationType;
@@ -46,14 +49,14 @@ class Client;
 class EntityList;
 class Inventory;
 class PyServiceMgr;
-
+class InventoryDB;
 
 class ItemFactory
 : public Singleton<ItemFactory>
 {
 public:
     ItemFactory();
-    ~ItemFactory()                                      { /* do nothing here */ }
+    ~ItemFactory();
 
     void Close();
     int Initialize();
@@ -64,6 +67,8 @@ public:
     void SetUsingClient(Client *pClient)                { m_pClient = pClient; }
     void UnsetUsingClient()                             { m_pClient = nullptr; }
     void AddItem(InventoryItemRef iRef);
+
+    InventoryDB* db()                                   { return m_db; }
 
     Client* GetUsingClient()                            { return m_pClient; }
     // load=true will load the item and its container (recursively) into server, up to solarSystem
@@ -80,23 +85,23 @@ public:
 
 
     // return a RefPtr of requested itemID, loading (and cache) as needed
-    SkillRef                GetSkillRef(uint32 skillID);
-    ShipItemRef             GetShipRef(uint32 shipID);
-    StationItemRef          GetStationRef(uint32 stationID);
-    BlueprintRef            GetBlueprintRef(uint32 blueprintID);
-    CharacterRef            GetCharacterRef(uint32 characterID);
-    ModuleItemRef           GetModuleRef(uint32 moduleID);      // not used
-    SolarSystemRef          GetSolarSystemRef(uint32 solarSystemID);
-    AsteroidItemRef         GetAsteroidRef(uint32 asteroidID);
-    StructureItemRef        GetStructureRef(uint32 structureID);
-    StationOfficeRef        GetOfficeRef(uint32 officeID);
-    InventoryItemRef        GetItemRef(uint32 itemID);
-    InventoryItemRef        GetItemContainerRef(uint32 itemID, bool load=true);
-    InventoryItemRef        GetItemRefFromID(uint32 itemID, bool load=true);
-    CargoContainerRef       GetCargoRef(uint32 containerID);
+    SkillRef                GetSkill(uint32 skillID);
+    ShipItemRef             GetShip(uint32 shipID);
+    StationItemRef          GetStationItem(uint32 stationID);
+    BlueprintRef            GetBlueprint(uint32 blueprintID);
+    CharacterRef            GetCharacter(uint32 characterID);
+    ModuleItemRef           GetModuleItem(uint32 moduleID);
+    SolarSystemRef          GetSolarSystem(uint32 solarSystemID);
+    AsteroidItemRef         GetAsteroid(uint32 asteroidID);
+    StructureItemRef        GetStructure(uint32 structureID);
+    StationOfficeRef        GetOffice(uint32 officeID);
+    InventoryItemRef        GetItem(uint32 itemID);
+    InventoryItemRef        GetItemContainer(uint32 itemID, bool load=true);
+    InventoryItemRef        GetInventoryItemFromID(uint32 itemID, bool load=true);
+    CargoContainerRef       GetCargoContainer(uint32 containerID);
     WreckContainerRef       GetWreckContainer(uint32 containerID);
-    CelestialObjectRef      GetCelestialRef(uint32 celestialID);
-    ProbeItemRef            GetProbeRef(uint32 probeID);
+    CelestialObjectRef      GetCelestialObject(uint32 celestialID);
+    ProbeItemRef            GetProbeItem(uint32 probeID);
 
 
     /**
@@ -114,13 +119,11 @@ public:
     InventoryItemRef        SpawnItem(ItemData &data);
     InventoryItemRef        SpawnTempItem(ItemData &data);
     StationOfficeRef        SpawnOffice(ItemData &idata, OfficeData& odata);
-    StationItemRef          SpawnOutpost(ItemData &idata);
     AsteroidItemRef         SpawnAsteroid(ItemData& idata, AsteroidData& adata);
     StructureItemRef        SpawnStructure(ItemData &data);
     CargoContainerRef       SpawnCargoContainer(ItemData &data);
     WreckContainerRef       SpawnWreckContainer(ItemData &data);
     ProbeItemRef            SpawnProbe(ItemData &data);
-    CelestialObjectRef      SpawnWormhole(ItemData &idata);
 
     /** @todo  add PI item spawners here */
 
@@ -134,6 +137,7 @@ public:
 
 
 protected:
+    InventoryDB* m_db;
     Client* m_pClient;     // client currently using the ItemFactory, we do not own this
 
     std::map<uint16, ItemType*> m_types;
@@ -154,6 +158,7 @@ private:
     uint32 m_nextTempID;
     uint32 m_nextDroneID;
     uint32 m_nextMissileID;
+
 };
 
 //Singleton
@@ -162,3 +167,4 @@ private:
 
 
 #endif
+

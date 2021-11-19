@@ -14,7 +14,6 @@
 #include "StaticDataMgr.h"
 #include "StatisticMgr.h"
 #include "character/Character.h"
-#include "inventory/Inventory.h"
 #include "ship/Ship.h"
 #include "ship/modules/MiningLaser.h"
 //#include "system/SystemBubble.h"
@@ -42,12 +41,12 @@ MiningLaser::MiningLaser(ModuleItemRef mRef, ShipItemRef sRef)
     } else if (m_modRef->groupID() == EVEDB::invGroups::Frequency_Mining_Laser) {
         m_rMiner = true;
         m_reloadTime = 8000;    // this is not set in ActiveModule c'tor.  easier/cheaper to set here.
-    } else if (m_modRef->groupID() == EVEDB::invGroups::Strip_Miner) {
+    } else if(m_modRef->groupID() == EVEDB::invGroups::Strip_Miner) {
         m_rMiner = true;
     }
 
     m_holdFlag = flagCargoHold;
-    _log(MINING__TRACE, "MiningLaser Created for %s with %ums Duration.", mRef->name(), GetAttribute(AttrDuration).get_uint32());
+    _log(MINING__TRACE, "MiningLaser Created for %s with %ums Duration.", mRef->name(), GetAttribute(AttrDuration).get_int());
 }
 
 void MiningLaser::LoadCharge(InventoryItemRef charge)
@@ -244,7 +243,7 @@ void MiningLaser::ProcessCycle(bool abort/*false*/)
         // do not reset ice radius (our huge-ass chunks will probably never expire)
         if (!m_iMiner) {
             /* reversing the radius-to-quantity formula, we get radius = exp((quantity + 112404.8) /25000)  */
-            double radius = exp((roidQuantity + 112404.8) / 25000);
+            double radius = exp((roidQuantity + 112404.8) /25000);
             // need to update players in bubble of this change.  not sure how yet
             roidRef->SetAttribute(AttrRadius, radius);
         }
@@ -343,7 +342,7 @@ void MiningLaser::Depleted(std::multimap<float, MiningLaser*> &mMap) {
         }
 
         // calculate ore for this laser
-        percent = cur.first / total;
+        percent = cur.first /total;
         oreAmount = roidQuantity * percent;
 
         // create and add ore to cargo for this laser
@@ -359,12 +358,13 @@ void MiningLaser::Depleted(std::multimap<float, MiningLaser*> &mMap) {
     }
 
     // calculate ore for this laser
-    percent = GetMiningVolume() / total;
+    percent = GetMiningVolume() /total;
     // create and add ore to cargo for this laser
     AddOreAndDeactivate(roidRef->typeID(), roidQuantity * percent, false);
 }
 
 void MiningLaser::AddOreAndDeactivate(uint16 typeID, float amt, bool slave/*true*/) {
+
     ItemData idata(typeID, m_shipRef->ownerID(), locTemp, flagNone, amt);
     InventoryItemRef oRef(sItemFactory.SpawnItem( idata ));
     if (oRef.get() == nullptr) {

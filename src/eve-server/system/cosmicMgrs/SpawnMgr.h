@@ -26,7 +26,7 @@ class SpawnMgr
 {
 public:
     SpawnMgr(SystemManager* mgr, PyServiceMgr& svc);
-    ~SpawnMgr()                                         { /* nothing do to yet */ }
+    ~SpawnMgr()                                 { /* nothing do to yet */ }
 
     bool Init();
 
@@ -45,7 +45,7 @@ public:
     void DoSpawnForMission(SystemBubble* pBubble, uint32 regionID);
     void DoSpawnForIncursion(SystemBubble* pBubble, uint32 regionID);
 
-    // primitive test for chained spawns
+    // primative test for chained spawns
     bool IsChaining(uint16 bubbleID);
     // this will be used for all spawn types
     void SpawnKilled(SystemBubble* pBubble, uint32 itemID);    // this DOES NOT remove entity from system or bubble.  user must do this BEFORE calling.
@@ -55,6 +55,7 @@ public:
     void StartRatGroupTimer();
     void StopRatGroupTimer()                            { m_ratGroupTimer.Disable(); }
 
+    bool IsRatSpawnEnabled()                            { return m_ratEnabled; }
     bool IsInitialized()                                { return m_initalized; }
     bool IsRatTimerStarted()                            { return m_ratTimer.Enabled(); }
 
@@ -90,6 +91,7 @@ private:
     Timer m_incursionTimer;
     Timer m_deadspaceTimer;
 
+    bool m_ratEnabled;         //allow belt rat spawning?
     bool m_initalized;      //allow spawning?
 
     uint16 m_groupTimerSetTime;     //ms - this is for hard-coding the respawn timer time.

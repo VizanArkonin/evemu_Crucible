@@ -27,6 +27,7 @@
 #ifndef __SYSTEMMANAGER_H_INCL__
 #define __SYSTEMMANAGER_H_INCL__
 
+#include "system/SystemGPoint.h"
 #include "system/BubbleManager.h"
 #include "system/SolarSystem.h"
 #include "system/SystemDB.h"
@@ -78,7 +79,7 @@ public:
 
     uint32 GetID() const                                { return m_data.systemID; }
     uint32 GetRegionID()                                { return m_data.regionID; }
-    uint32 GetConstellationID()                         { return m_data.constellationID; }
+    uint32 GetConstellationID()                         { return m_data.regionID; }
     const std::string& GetNameStr() const               { return m_data.name; }
     const char* GetName() const                         { return m_data.name.c_str(); }
     const char* GetSystemSecurityClass()                { return m_data.securityClass.c_str(); }
@@ -113,7 +114,6 @@ public:
     // range is 0.1 for 1.0 system to 2.0 for -0.9 system
     float GetSecValue()                                 { return m_secValue; }
 
-    // this create a SE with given data and add to system
     bool BuildDynamicEntity(const DBSystemDynamicEntity& entity, uint32 launcherID=0);
 
     void AddNPC(NPC* pNPC);
@@ -153,8 +153,6 @@ public:
     std::map<uint32, SystemEntity*> GetOperationalStatics() { return m_opStaticEntities; }
     std::map<uint32, SystemEntity*> GetGates() { return m_gateMap; }
 
-    SystemEntity* GetEntityByID(uint32 itemID) { return m_entities.find(itemID)->second; }
-
     void GetClientList(std::vector<Client*>& cVec);
 
     std::map< uint32, SystemEntity* > GetEntities()     { return m_entities; }
@@ -183,6 +181,8 @@ private:
 
     PyServiceMgr& m_services;
     SolarSystemRef m_solarSystemRef;
+
+    SystemGPoint mGP;
 
     // static system data
     SystemData m_data;

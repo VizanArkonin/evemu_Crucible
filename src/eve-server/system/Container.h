@@ -30,7 +30,6 @@
 
 #include "EVEServerConfig.h"
 #include "StaticDataMgr.h"
-#include "inventory/Inventory.h"
 #include "inventory/InventoryItem.h"
 #include "system/SystemEntity.h"
 
@@ -114,7 +113,7 @@ protected:
             _log(ITEM__ERROR, "Trying to load %s as Container.", sDataMgr.GetCategoryName(type.categoryID()));
             if (sConfig.debug.StackTrace)
                 EvE::traceStack();
-            return RefPtr<_Ty>(nullptr);
+            return RefPtr<_Ty>();
         }
         return CargoContainerRef( new CargoContainer(containerID, type, data ) );
     }
@@ -156,8 +155,6 @@ public:
     virtual void EncodeDestiny(Buffer& into);
     virtual PyDict* MakeSlimItem();
     virtual void MakeDamageState(DoDestinyDamageState &into);
-    // this uses targetMgr update to send to all interested parties
-    virtual void SendDamageStateChanged();
 
     /* specific functions handled in this class. */
     void Activate(int32 effectID);
@@ -222,7 +219,7 @@ protected:
             _log(ITEM__ERROR, "Trying to load %s as Wreck.", sDataMgr.GetCategoryName(type.categoryID()));
             if (sConfig.debug.StackTrace)
                 EvE::traceStack();
-            return RefPtr<_Ty>(nullptr);
+            return RefPtr<_Ty>();
         }
         return WreckContainerRef( new WreckContainer(containerID, type, data ) );
     }
@@ -257,15 +254,13 @@ public:
     virtual void                Process();
     virtual void                EncodeDestiny(Buffer& into);
     virtual PyDict*             MakeSlimItem();
-    // this uses targetMgr update to send to all interested parties
-    virtual void                SendDamageStateChanged();
 
     /* virtual functions default to base class and overridden as needed */
     virtual void                Abandon();
 
     /* specific functions handled in this class. */
     void Salvaged()                                     { m_contRef->Salvaged(); }
-    void SetLaunchedByID(uint32 launcherID=0)           { m_launchedByID = launcherID; }
+    void SetLaunchedByID(uint32 launcherID)             { m_launchedByID = launcherID; }
     bool IsEmpty()                                      { return m_contRef->IsEmpty(); }
 
     /** @todo (allan) finish this */

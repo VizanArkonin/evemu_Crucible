@@ -58,12 +58,14 @@ class PyRep;
 
 class EvilNumber
 {
+
 private:
     double fVal;
     int64 iVal;
     EVIL_NUMBER_TYPE mType;
 
 public:
+
     EvilNumber();
     EvilNumber(int8 val);
     EvilNumber(uint8 val);
@@ -74,6 +76,7 @@ public:
     EvilNumber(int64 val);
     EvilNumber(float val);
     EvilNumber(double val);
+
 
     /************************************************************************/
     /* EvilNumber manipulation operator handlers                            */

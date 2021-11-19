@@ -93,7 +93,7 @@ void FactoryDB::SetJobEventID(const uint32 jobID, const uint32 eventID)
 
 bool FactoryDB::DeleteBlueprint(uint32 blueprintID) {
     DBerror err;
-    if (!sDatabase.RunQuery(err, "DELETE FROM invBlueprints WHERE itemID=%u", blueprintID)) {
+    if(!sDatabase.RunQuery(err, "DELETE FROM invBlueprints WHERE itemID=%u", blueprintID)) {
         _log(DATABASE__ERROR, "Failed to delete blueprint %u: %s.", blueprintID, err.c_str());
         return false;
     }
@@ -103,7 +103,7 @@ bool FactoryDB::DeleteBlueprint(uint32 blueprintID) {
 PyRep* FactoryDB::GetMaterialCompositionOfItemType(const uint32 typeID) {
     DBQueryResult res;
 
-    if (!sDatabase.RunQuery(res,
+    if(!sDatabase.RunQuery(res,
         "SELECT requiredTypeID AS typeID, quantity"
         " FROM ramTypeRequirements"
         " WHERE typeID = (SELECT blueprintTypeID FROM invBlueprintTypes WHERE productTypeID = %u)"
@@ -130,7 +130,7 @@ void FactoryDB::GetOutpostMaterialCompositionOfItemType(const uint32 typeID, DBQ
 
 bool FactoryDB::SaveBlueprintData(uint32 blueprintID, EvERam::bpData& data) {
     DBerror err;
-    if (!sDatabase.RunQuery(err,
+    if(!sDatabase.RunQuery(err,
         "INSERT INTO invBlueprints"
         "  (itemID, copy, mLevel, pLevel, runs)"
         " VALUES"
@@ -148,9 +148,9 @@ bool FactoryDB::SaveBlueprintData(uint32 blueprintID, EvERam::bpData& data) {
     return true;
 }
 
-bool FactoryDB::GetBlueprintData(uint32 blueprintID, EvERam::bpData& into) {
+bool FactoryDB::GetBlueprint(uint32 blueprintID, EvERam::bpData& into) {
     DBQueryResult res;
-    if (!sDatabase.RunQuery(res,
+    if(!sDatabase.RunQuery(res,
         "SELECT"
         "  copy,"
         "  mLevel,"
@@ -160,7 +160,7 @@ bool FactoryDB::GetBlueprintData(uint32 blueprintID, EvERam::bpData& into) {
         " WHERE itemID=%u",
         blueprintID))
     {
-        codelog(DATABASE__ERROR, "Error in GetBlueprintData query: %s.", res.error.c_str());
+        codelog(DATABASE__ERROR, "Error in GetBlueprint query: %s.", res.error.c_str());
         return false;
     }
 
@@ -730,41 +730,50 @@ bool FactoryDB::GetMultipliers(const uint32 assemblyLineID, const ItemType* pTyp
 bool FactoryDB::IsRefinable(const uint16 typeID) {
     DBQueryResult res;
     if (!sDatabase.RunQuery(res,
-        "SELECT typeID FROM ramTypeRequirements"
-        " WHERE typeID=%u AND extra = 0 LIMIT 1",
+        "SELECT NULL"
+        " FROM ramTypeRequirements"
+        " WHERE typeID=%u"
+        " AND extra = 0"
+        " LIMIT 1",
         typeID))
     {
         _log(DATABASE__ERROR, "Failed to check ore type ID: %s.", res.error.c_str());
         return false;
     }
 
-    return (res.ColumnCount() > 0);
+    DBResultRow row;
+    return (res.GetRow(row));
 }
 
 bool FactoryDB::IsRecyclable(const uint16 typeID) {
     DBQueryResult res;
     if (!sDatabase.RunQuery(res,
-        "SELECT typeID FROM ramTypeRequirements"
+        "SELECT NULL FROM ramTypeRequirements"
+        " LEFT JOIN invBlueprintTypes ON typeID = blueprintTypeID"
         " WHERE damagePerJob = 1 AND activityID = 6 AND typeID = %u"
-        " AND extra = 1 LIMIT 1",
+        " AND extra = 1"
+        " LIMIT 1",
         typeID))
     {
         _log(DATABASE__ERROR, "Failed to check item type ID: %s.", res.error.c_str());
         return false;
     }
 
-    if (res.ColumnCount() > 0)
+    DBResultRow row;
+    if (res.GetRow(row))
         return true;
 
     if (!sDatabase.RunQuery(res,
-        "SELECT typeID FROM ramTypeRequirements"
+        "SELECT NULL FROM ramTypeRequirements"
+        " LEFT JOIN invBlueprintTypes ON typeID = blueprintTypeID"
         " WHERE damagePerJob = 1 AND activityID = 1 AND productTypeID = %u"
-        " AND extra = 1 LIMIT 1",
+        " AND extra = 1"
+        " LIMIT 1",
         typeID))
     {
         _log(DATABASE__ERROR, "Failed to check item type ID: %s.", res.error.c_str());
         return false;
     }
 
-    return (res.ColumnCount() > 0);
+    return (res.GetRow(row));
 }

@@ -12,7 +12,6 @@
 #include "admin/CommandDB.h"
 #include "fleet/FleetService.h"
 #include "inventory/AttributeEnum.h"
-#include "inventory/Inventory.h"
 #include "inventory/InventoryDB.h"
 #include "inventory/InventoryItem.h"
 #include "manufacturing/Blueprint.h"
@@ -464,14 +463,14 @@ PyResult Command_inventory(Client* pClient, CommandDB* db, PyServiceMgr* service
     } else {
         //Command_list(pClient,db,services,args);
         inventoryID = pClient->GetSystemID();
-        SolarSystemRef sRef = sItemFactory.GetSolarSystemRef(inventoryID);
-        if (sRef.get() == nullptr)
+        SolarSystemRef system = sItemFactory.GetSolarSystem(inventoryID);
+        if (system.get() == nullptr)
             throw CustomError ("Cannot find System Reference for systemID %u", inventoryID);
-        inv = sRef->GetMyInventory();
+        inv = system->GetMyInventory();
         if (inv == nullptr)
             throw CustomError ("Cannot find inventory for locationID %u", inventoryID);
         inv->GetInventoryMap(invMap);
-        item = sRef.get();
+        item = system.get();
     }
 
     std::ostringstream str;
@@ -479,21 +478,8 @@ PyResult Command_inventory(Client* pClient, CommandDB* db, PyServiceMgr* service
     str << "%s<br>";
     str << "InventoryID %u(%p) (Item %p) has %u items.<br><br>"; //70
 
-    if (IsSolarSystemID(inventoryID)) {
-        SystemEntity* pSE(nullptr);
-        SystemManager* sMgr = pClient->SystemMgr();
-        for (auto cur : invMap) {
-            pSE = sMgr->GetEntityByID(cur.first);
-            if (pSE->SysBubble() == nullptr) {
-                str << cur.first << "(" << sDataMgr.GetFlagName(cur.second->flag()) << ")[n/a]: " << cur.second->itemName() << "<br>"; // 20 + 70 for name (90)
-            } else {
-                str << cur.first << "(" << sDataMgr.GetFlagName(cur.second->flag()) << ")[" << pSE->SysBubble()->GetID() << "]: " << cur.second->itemName() << "<br>"; // 20 + 70 for name (90)
-            }
-        }
-    } else {
-        for (auto cur : invMap)
-            str << cur.first << "(" << sDataMgr.GetFlagName(cur.second->flag()) << "): " << cur.second->itemName() << "<br>"; // 20 + 70 for name (90)
-    }
+    for (auto cur : invMap)
+        str << cur.first << "(" << sDataMgr.GetFlagName(cur.second->flag()) << "): " << cur.second->itemName() << "<br>"; // 20 + 70 for name (90)
 
     int count = invMap.size();
     int size = count * 90;
@@ -513,7 +499,7 @@ PyResult Command_shipinventory(Client* pClient, CommandDB* db, PyServiceMgr* ser
     std::map<uint32, InventoryItemRef> invMap;
     invMap.clear();
     uint32 inventoryID = pClient->GetShipID();
-    ShipItemRef ship = sItemFactory.GetShipRef(inventoryID);
+    ShipItemRef ship = sItemFactory.GetShip(inventoryID);
     Inventory* inv = ship->GetMyInventory();
     inv->GetInventoryMap(invMap);
 
@@ -585,7 +571,7 @@ PyResult Command_attrlist(Client* pClient, CommandDB* db, PyServiceMgr* services
         throw CustomError ("Argument 1 must be a valid itemID.");
     uint32 itemID(atol(args.arg(1).c_str()));
 
-    InventoryItemRef iRef(sItemFactory.GetItemRef(itemID));
+    InventoryItemRef iRef(sItemFactory.GetItem(itemID));
     if (iRef.get() == nullptr) {
         // make error msg here
         return nullptr;
@@ -599,16 +585,16 @@ PyResult Command_attrlist(Client* pClient, CommandDB* db, PyServiceMgr* services
     str << "%s (%u) has %u attributes.<br><br>"; //70
 
     for (auto cur : attrMap) {
-        str << sDataMgr.GetAttrName(cur.first) << " ("<< cur.first << ") ";  //35
+        str << cur.first << " ";  //15
         if (cur.second.get_type() == evil_number_int)    //15
             str << "i- " << cur.second.get_int();
         else
             str << "f- " << cur.second.get_float();
-        str << "<br>"; // 4 + 15 + 35 (54)
+        str << "<br>"; // 3 + 15 + 15 (40)
     }
 
     int count = attrMap.size();
-    int size = count * 60;
+    int size = count * 40;
     size += 70;
     char reply[size];
     snprintf(reply, size, str.str().c_str(), iRef->name(), itemID, count);
@@ -739,7 +725,7 @@ PyResult Command_bubbletrack(Client* pClient, CommandDB* db, PyServiceMgr* servi
     }
 
     // begin argument processing
-    int locationID(0);
+    int locationID = 0;
     if (args.argCount() < 2) {
         if (sConfig.debug.BubbleTrack) {
             pClient->GetShipSE()->SysBubble()->MarkCenter();
@@ -920,7 +906,7 @@ PyResult Command_players(Client* pClient, CommandDB* db, PyServiceMgr* services,
     sEntityList.GetClients(cVec);
     std::ostringstream str;
     str.clear();
-    str << "Active Player List:<br>" << std::to_string(cVec.size()) << " Online Players.<br>";
+    str << "Active Player List:<br>" << cVec.size() << " Online Players.<br>";
 
     for (auto cur : cVec) {
         str << cur->GetName();

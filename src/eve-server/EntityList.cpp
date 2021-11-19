@@ -108,10 +108,10 @@ void EntityList::Shutdown() {
 void EntityList::Close()
 {
     if (m_clients.size() > 0) {
-        sLog.Yellow("       EntityList", "Cleaning up %lu clients, %lu systems, %lu agents, and %lu stations", \
+        sLog.Yellow("       EntityList", "Cleaning up %u clients, %u systems, %u agents, and %u stations", \
                     m_clients.size(), m_systems.size(), m_agents.size(), m_stations.size());
     } else {
-        sLog.Green("       EntityList", "Cleaning up %lu clients, %lu systems, %lu agents, and %lu stations", \
+        sLog.Green("       EntityList", "Cleaning up %u clients, %u systems, %u agents, and %u stations", \
                     m_clients.size(), m_systems.size(), m_agents.size(), m_stations.size());
     }
 
@@ -219,7 +219,7 @@ void EntityList::Process() {
 
     /* check for 1Hz timer tic */
     if (m_stampTimer.Check()) {
-        double profileStartTime(GetTimeUSeconds());
+        double profileStartTime = GetTimeUSeconds();
 
         ++m_stamp;
 
@@ -777,9 +777,9 @@ Client* EntityList::FindClientByName(const char* name) const {
 void EntityList::RegisterSID(int64 &sessionID) {
     /*  this whole method is just made up...eventually it will return a unique long long */
     /* max for int64 = 9223372036854775807 */
-    std::set<int64>::iterator itr = m_sessions.find(sessionID);
+    std::set<int64>::iterator cur = m_sessions.find(sessionID);
     std::pair<std::_Rb_tree_const_iterator<int64>, bool > test;
-    if (itr == m_sessions.end())
+    if (cur == m_sessions.end())
         test = m_sessions.insert(sessionID);
     if (test.second)
         return;

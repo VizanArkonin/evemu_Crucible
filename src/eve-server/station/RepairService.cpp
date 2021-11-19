@@ -25,12 +25,11 @@
 */
 
 #include "eve-server.h"
-#include "packets/Repair.h"
 
 #include "PyBoundObject.h"
 #include "PyServiceCD.h"
 #include "Client.h"
-#include "inventory/Inventory.h"
+#include "packets/Repair.h"
 #include "ship/ShipDB.h"
 #include "station/RepairService.h"
 #include "station/Station.h"
@@ -142,7 +141,7 @@ PyResult RepairSvcBound::Handle_RepairItems(PyCallArgs &call) {
     std::vector<InventoryItemRef> itemRefVec;
     PyList::const_iterator itr = args.itemIDs->begin(), end = args.itemIDs->end();
     for (; itr != end; ++itr) {
-        iRef = sItemFactory.GetItemRef(PyRep::IntegerValueU32(*itr));
+        iRef = sItemFactory.GetItem(PyRep::IntegerValueU32(*itr));
         if (iRef.get() == nullptr)
             continue;
 
@@ -269,7 +268,7 @@ void RepairService::GetDamageReports(uint32 itemID, Inventory* pInv, PyList* lis
     std::vector<InventoryItemRef> itemRefVec;
     InventoryItemRef iRef = pInv->GetByID(itemID);
     if (iRef.get() == nullptr) {
-        iRef = sItemFactory.GetItemRef(itemID);
+        iRef = sItemFactory.GetItem(itemID);
         if (iRef.get() == nullptr)
             return;
     }
@@ -361,7 +360,7 @@ PyResult RepairService::Handle_UnasembleItems(PyCallArgs &call) {
                     // Get the itemID.
                     itemID = PyRep::IntegerValue(tuple->GetItem(0));
                     //itemLoc = PyRep::IntegerValue(tuple->GetItem(1));
-                    iRef = sItemFactory.GetItemRef(itemID);
+                    iRef = sItemFactory.GetItem(itemID);
                     if (iRef.get() != nullptr) {
                         // Add type exceptions here.
                         if (iRef->categoryID() == EVEDB::invCategories::Blueprint

@@ -92,6 +92,8 @@ PyResult AllianceBound::Handle_GetMembers(PyCallArgs &call)
     call.Dump(ALLY__CALL_DUMP);
 
     return m_db.GetMembers(m_allyID);
+
+    return nullptr;
 }
 
 PyResult AllianceBound::Handle_DeclareExecutorSupport(PyCallArgs &call)
@@ -138,6 +140,8 @@ PyResult AllianceBound::Handle_GetApplications(PyCallArgs &call)
     call.Dump(ALLY__CALL_DUMP);
 
     return m_db.GetApplications(m_allyID);
+
+    return nullptr;
 }
 
 PyResult AllianceBound::Handle_UpdateApplication(PyCallArgs &call)
@@ -606,7 +610,7 @@ PyResult AllianceBound::Handle_UpdateAlliance(PyCallArgs &call)
 
     //Send notification to the client about the alliance change which just occurred
     call.client->SendNotification("OnAllianceChanged", "clientID", ac.Encode(), false);
-    _log(SOV__DEBUG, "OnAllianceChanged sent to %s(%u)", call.client->GetName(), call.client->GetCharID());
+    _log(SOV__DEBUG, "OnAllianceChanged sent to client %u", call.client->GetClientID());
 
     return nullptr;
 }

@@ -48,7 +48,7 @@ public:
 
     bool ApplyDamage(Damage& d);
     void MakeDamageState(DoDestinyDamageState& into) const;
-    void Killed(Damage& damage);
+    void Killed(Damage& fatal_blow);
 
     void TargetLost(SystemEntity* who);
     void TargetedAdd(SystemEntity* who);

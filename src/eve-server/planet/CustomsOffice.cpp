@@ -24,8 +24,6 @@
 #include "EVEServerConfig.h"
 #include "StaticDataMgr.h"
 #include "manufacturing/Blueprint.h"
-#include "map/MapDB.h"
-#include "math/Trig.h"
 #include "packets/Planet.h"
 #include "planet/CustomsOffice.h"
 #include "planet/Planet.h"
@@ -429,13 +427,13 @@ PyDict *CustomsSE::MakeSlimItem() {
     return slim;
 }
 
-void CustomsSE::Killed(Damage &damage) {
+void CustomsSE::Killed(Damage &fatal_blow) {
     if ((m_bubble == nullptr) or (m_destiny == nullptr) or (m_system == nullptr))
         return; // make error here?
 
     uint32 killerID = 0;
     Client* pClient(nullptr);
-    SystemEntity* killer = damage.srcSE;
+    SystemEntity* killer = fatal_blow.srcSE;
 
     if (killer->HasPilot()) {
         pClient = killer->GetPilot();
@@ -487,7 +485,7 @@ void CustomsSE::Killed(Damage &damage) {
     /* populate kill data for killMail and save to db  -allan 01May16  --updated 13July17 */
     /** @todo  check for tower/tcu/sbu/jammer and make killmail */
     /** @todo send pos mail/notification to corp members */
-    KillData data = KillData();
+    CharKillData data = CharKillData();
         data.solarSystemID = m_system->GetID();
         data.victimCharacterID = 0; // charID = 0 means strucuture/item
         data.victimCorporationID = m_corpID;
@@ -500,9 +498,9 @@ void CustomsSE::Killed(Damage &damage) {
         data.finalAllianceID = killer->GetAllianceID();
         data.finalFactionID = killer->GetWarFactionID();
         data.finalShipTypeID = killer->GetTypeID();
-        data.finalWeaponTypeID = damage.weaponRef->typeID();
+        data.finalWeaponTypeID = fatal_blow.weaponRef->typeID();
         data.finalSecurityStatus = 0;  /* fix this */
-        data.finalDamageDone = damage.GetTotal();
+        data.finalDamageDone = fatal_blow.GetTotal();
 
         uint32 totalHP = m_self->GetAttribute(AttrHP).get_int();
             totalHP += m_self->GetAttribute(AttrArmorHP).get_int();
@@ -541,11 +539,6 @@ void CustomsSE::Killed(Damage &damage) {
         _log(PHYSICS__TRACE, "Ship::Killed() - Ship %s(%u) Position: %.2f,%.2f,%.2f.  Wreck %s(%u) Position: %.2f,%.2f,%.2f.", \
         GetName(), GetID(), x(), y(), z(), wreckItemRef->name(), wreckItemRef->itemID(), wreckPosition.x, wreckPosition.y, wreckPosition.z);
 
-    DropLoot(wreckItemRef, m_self->groupID(), killerID);
-
-    for (auto cur: survivedItems)
-        cur->Move(wreckItemRef->itemID(), flagNone); // populate wreck with items that survived
-
     DBSystemDynamicEntity wreckEntity = DBSystemDynamicEntity();
         wreckEntity.allianceID = killer->GetAllianceID();
         wreckEntity.categoryID = EVEDB::invCategories::Celestial;
@@ -564,4 +557,9 @@ void CustomsSE::Killed(Damage &damage) {
         return;
     }
     m_destiny->SendJettisonPacket();
+
+    DropLoot(wreckItemRef, m_self->groupID(), killerID);
+
+    for (auto cur: survivedItems)
+        cur->Move(wreckItemRef->itemID(), flagNone); // populate wreck with items that survived
 }

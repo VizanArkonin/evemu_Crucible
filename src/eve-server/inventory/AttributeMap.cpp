@@ -72,14 +72,14 @@ bool AttributeMap::Load(bool reset/*false*/) {
         DBQueryResult res;
         if (IsCharacterID(mItem.itemID())) {
             if (!sDatabase.RunQuery(res, "SELECT attributeID, valueInt, valueFloat FROM chrCharacterAttributes WHERE charID=%u", mItem.itemID()))
-                _log(DATABASE__ERROR, "AttributeMap Error in db load query: %s", res.error.c_str());
+                _log(DATABASE__ERROR, "AttributeMap", "Error in db load query: %s", res.error.c_str());
         } else {
             if (!sDatabase.RunQuery(res, "SELECT attributeID, valueInt, valueFloat FROM entity_attributes WHERE itemID=%u", mItem.itemID()))
-                _log(DATABASE__ERROR, "AttributeMap Error in db load query: %s", res.error.c_str());
+                _log(DATABASE__ERROR, "AttributeMap", "Error in db load query: %s", res.error.c_str());
         }
 
         DBResultRow row;
-        EvilNumber value(EvilZero);
+        EvilNumber value;
         while (res.GetRow(row)) {
             if (row.IsNull(1)) {
                 if (row.IsNull(2)) {
@@ -95,7 +95,7 @@ bool AttributeMap::Load(bool reset/*false*/) {
     }
     /* item now has it's own attribute map, and is deleted when item object is destroyed or reset */
     if (is_log_enabled(ATTRIBUTE__INFO))
-        _log(ATTRIBUTE__INFO, "AttributeMap::Load()  Loaded %lu attribs for %s.", mAttributes.size(), mItem.name());
+        _log(ATTRIBUTE__INFO, "AttributeMap::Load()  Loaded %u attribs for %s.", mAttributes.size(), mItem.name());
     return true;
 }
 
@@ -112,7 +112,7 @@ bool AttributeMap::Save() {
      *   damage and online for modules
      *   damage and quantity for charges, where applicable
      *
-     *  note: ship damage saved separately
+     *  ship damage saved separately
      */
     if (IsStaticItem(mItem.itemID()))
         return true;
@@ -228,8 +228,7 @@ void AttributeMap::SetAttribute(uint16 attrID, EvilNumber& num, bool notify/*tru
         mAttributes.emplace(attrID, num);
         if (notify) {
             Add(attrID, num);
-        }
-        if (is_log_enabled(ATTRIBUTE__MISSING)) {
+        } else if (is_log_enabled(ATTRIBUTE__MISSING)) {
             if (num.isFloat()) {
                 _log(ATTRIBUTE__MISSING, "Attribute %u not in map.  Adding as %.2f for %s(%u)", \
                         attrID, num.get_float(), mItem.name(), mItem.itemID());
@@ -237,8 +236,7 @@ void AttributeMap::SetAttribute(uint16 attrID, EvilNumber& num, bool notify/*tru
                 _log(ATTRIBUTE__MISSING, "Attribute %u not in map.  Adding as %li for %s(%u)", \
                     attrID, num.get_int(), mItem.name(), mItem.itemID());
             }
-        }
-        if (is_log_enabled(ATTRIBUTE__ADD)) {
+        } else if (is_log_enabled(ATTRIBUTE__ADD)) {
             if (num.isFloat()) {
                 _log(ATTRIBUTE__ADD, "Attribute %u not in map.  Adding as %.2f for %s(%u)", \
                 attrID, num.get_float(), mItem.name(), mItem.itemID());
@@ -256,8 +254,7 @@ void AttributeMap::SetAttribute(uint16 attrID, EvilNumber& num, bool notify/*tru
 
     if (notify) {
         Change(attrID, itr->second, num);
-    }
-    if (is_log_enabled(ATTRIBUTE__CHANGE)) {
+    } else if (is_log_enabled(ATTRIBUTE__CHANGE)) {
         if (itr->second.isFloat()) {
             if (num.isFloat()) {
                 _log(ATTRIBUTE__CHANGE, "Changing Attribute %u from %.2f to %.2f for %s(%u)", \
@@ -432,7 +429,6 @@ bool AttributeMap::SendChanges(PyTuple* attrChange) {
     if (attrChange == nullptr)
         return true;
 
-    /** @todo update this to use my new multicast replacement */
     if (IsPlayerCorp(mItem.ownerID())) {
         // there is no code to get corp AND loc in multicast.  it sends to both
         MulticastTarget mct;
@@ -494,74 +490,74 @@ void AttributeMap::SaveShipState()
     Inserts << "REPLACE INTO entity_attributes ";
     Inserts << " (itemID, attributeID, valueInt, valueFloat) VALUES";
     bool save(false);
-    AttrMap::iterator itr = mAttributes.find(AttrShieldCharge);
-    if (itr != mAttributes.end()) {
+    AttrMap::iterator cur = mAttributes.find(AttrShieldCharge);
+    if (cur != mAttributes.end()) {
         save = true;
-        Inserts << "(" << mItem.itemID() << ", " << itr->first << ", ";
-        if ( itr->second.get_type() == evil_number_int ) {
-            Inserts << itr->second.get_int() << ", NULL)";
+        Inserts << "(" << mItem.itemID() << ", " << cur->first << ", ";
+        if ( cur->second.get_type() == evil_number_int ) {
+            Inserts << cur->second.get_int() << ", NULL)";
         } else {
-            Inserts << " NULL, " << itr->second.get_double() << ")";
+            Inserts << " NULL, " << cur->second.get_double() << ")";
         }
     }
-    itr = mAttributes.find(AttrArmorDamage);
-    if (itr != mAttributes.end()) {
+    cur = mAttributes.find(AttrArmorDamage);
+    if (cur != mAttributes.end()) {
         if (save)
             Inserts << ",";
         save = true;
-        Inserts << "(" << mItem.itemID() << ", " << itr->first << ", ";
-        if ( itr->second.get_type() == evil_number_int ) {
-            Inserts << itr->second.get_int() << ", NULL)";
+        Inserts << "(" << mItem.itemID() << ", " << cur->first << ", ";
+        if ( cur->second.get_type() == evil_number_int ) {
+            Inserts << cur->second.get_int() << ", NULL)";
         } else {
-            Inserts << " NULL, " << itr->second.get_double() << ")";
+            Inserts << " NULL, " << cur->second.get_double() << ")";
         }
     }
-    itr = mAttributes.find(AttrDamage);
-    if (itr != mAttributes.end()) {
+    cur = mAttributes.find(AttrDamage);
+    if (cur != mAttributes.end()) {
         if (save)
             Inserts << ",";
         save = true;
-        Inserts << "(" << mItem.itemID() << ", " << itr->first << ", ";
-        if ( itr->second.get_type() == evil_number_int ) {
-            Inserts << itr->second.get_int() << ", NULL)";
+        Inserts << "(" << mItem.itemID() << ", " << cur->first << ", ";
+        if ( cur->second.get_type() == evil_number_int ) {
+            Inserts << cur->second.get_int() << ", NULL)";
         } else {
-            Inserts << " NULL, " << itr->second.get_double() << ")";
+            Inserts << " NULL, " << cur->second.get_double() << ")";
         }
     }
-    itr = mAttributes.find(AttrHeatHi);
-    if (itr != mAttributes.end()) {
+    cur = mAttributes.find(AttrHeatHi);
+    if (cur != mAttributes.end()) {
         if (save)
             Inserts << ",";
         save = true;
-        Inserts << "(" << mItem.itemID() << ", " << itr->first << ", ";
-        if ( itr->second.get_type() == evil_number_int ) {
-            Inserts << itr->second.get_int() << ", NULL)";
+        Inserts << "(" << mItem.itemID() << ", " << cur->first << ", ";
+        if ( cur->second.get_type() == evil_number_int ) {
+            Inserts << cur->second.get_int() << ", NULL)";
         } else {
-            Inserts << " NULL, " << itr->second.get_double() << ")";
+            Inserts << " NULL, " << cur->second.get_double() << ")";
         }
     }
-    itr = mAttributes.find(AttrHeatMed);
-    if (itr != mAttributes.end()) {
+    cur = mAttributes.find(AttrHeatMed);
+    if (cur != mAttributes.end()) {
         if (save)
             Inserts << ",";
         save = true;
-        Inserts << "(" << mItem.itemID() << ", " << itr->first << ", ";
-        if ( itr->second.get_type() == evil_number_int ) {
-            Inserts << itr->second.get_int() << ", NULL)";
+        Inserts << "(" << mItem.itemID() << ", " << cur->first << ", ";
+        if ( cur->second.get_type() == evil_number_int ) {
+            Inserts << cur->second.get_int() << ", NULL)";
         } else {
-            Inserts << " NULL, " << itr->second.get_double() << ")";
+            Inserts << " NULL, " << cur->second.get_double() << ")";
         }
     }
-    itr = mAttributes.find(AttrHeatLow);
-    if (itr != mAttributes.end()) {
+    cur = mAttributes.find(AttrHeatLow);
+    if (cur != mAttributes.end()) {
         if (save)
             Inserts << ",";
         save = true;
-        Inserts << "(" << mItem.itemID() << ", " << itr->first << ", ";
-        if ( itr->second.get_type() == evil_number_int ) {
-            Inserts << itr->second.get_int() << ", NULL)";
+        Inserts << "(" << mItem.itemID() << ", " << cur->first << ", ";
+        if ( cur->second.get_type() == evil_number_int ) {
+            Inserts << cur->second.get_int() << ", NULL)";
         } else {
-            Inserts << " NULL, " << itr->second.get_double() << ")";
+            Inserts << " NULL, " << cur->second.get_double() << ")";
         }
     }
 

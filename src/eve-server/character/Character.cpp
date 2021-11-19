@@ -25,7 +25,6 @@
 */
 
 #include "eve-server.h"
-//#include "../../eve-common/EVE_Skills.h"
 
 #include "Client.h"
 #include "ConsoleCommands.h"
@@ -37,7 +36,6 @@
 #include "effects/EffectsProcessor.h"
 #include "fleet/FleetService.h"
 #include "inventory/AttributeEnum.h"
-#include "inventory/Inventory.h"
 #include "ship/Ship.h"
 
 /*
@@ -282,7 +280,7 @@ bool Character::_Load() {
         return (m_loaded = false);
     }
     if (!m_skillQueue.empty()) {
-        SkillRef sRef = GetCharSkillRef(m_skillQueue.front().typeID);
+        SkillRef sRef = GetSkill(m_skillQueue.front().typeID);
         if (sRef.get() != nullptr) {
             sRef->SetFlag(flagSkillInTraining, false);
             m_inTraining = sRef.get();
@@ -536,7 +534,7 @@ void Character::GetSkillsList(std::vector<InventoryItemRef> &skills) const {
 }
 
 bool Character::HasSkill(uint16 skillTypeID) const {
-    return (GetCharSkillRef(skillTypeID).get() != nullptr);
+    return (GetSkill(skillTypeID).get() != nullptr);
 }
 
 PyRep* Character::GetSkillHistory() {
@@ -563,7 +561,7 @@ uint8 Character::GetSPPerMin(Skill* skill)
     return EvEMath::Skill::PointsPerMinute(primary, secondary);
 }
 
-SkillRef Character::GetCharSkillRef(uint16 skillTypeID) const
+SkillRef Character::GetSkill(uint16 skillTypeID) const
 {
     InventoryItemRef skill = pInventory->GetByTypeFlag( skillTypeID, flagSkill );
     if (skill.get() == nullptr)
@@ -573,7 +571,7 @@ SkillRef Character::GetCharSkillRef(uint16 skillTypeID) const
 }
 
 int8 Character::GetSkillLevel(uint16 skillTypeID, bool zeroForNotInjected /*true*/) const {
-    SkillRef requiredSkill = GetCharSkillRef( skillTypeID );
+    SkillRef requiredSkill = GetSkill( skillTypeID );
     // First, check for existence of skill trained or in training:
     if (requiredSkill.get() == nullptr)
         return (zeroForNotInjected ? 0 : -1);
@@ -582,7 +580,7 @@ int8 Character::GetSkillLevel(uint16 skillTypeID, bool zeroForNotInjected /*true
 }
 
 bool Character::HasSkillTrainedToLevel(uint16 skillTypeID, uint8 skillLevel) const {
-    SkillRef requiredSkill = GetCharSkillRef( skillTypeID );
+    SkillRef requiredSkill = GetSkill( skillTypeID );
     // First, check for existence of skill
     if (requiredSkill.get() == nullptr)
         return false;
@@ -642,10 +640,10 @@ int64 Character::GetEndOfTraining() {
 void Character::RemoveFromQueue(SkillRef sRef)
 {
     SkillQueue::iterator itr = m_skillQueue.begin();
-    while (itr != m_skillQueue.end()) {
+    for (; itr != m_skillQueue.end(); ++itr) {
         if (sRef->typeID() == itr->typeID)
             if (sRef->GetAttribute(AttrSkillLevel).get_uint32() >= itr->level)
-                itr = m_skillQueue.erase(itr);
+                m_skillQueue.erase(itr);
     }
     SkillQueueLoop();
 }
@@ -704,10 +702,10 @@ uint8 Character::InjectSkillIntoBrain(SkillRef skill) {
     // returns
     // 1=success, 2=prereqs, 3=already known, 4=split fail, 5=load fail
 
-    SkillRef oldSkill(GetCharSkillRef(skill->typeID()));
+    SkillRef oldSkill = GetSkill( skill->typeID() );
     if (oldSkill.get() != nullptr) {
         /** @todo: build and send proper UserError for CharacterAlreadyKnowsSkill. */
-        m_pClient->SendNotifyMsg("You already know this skill.");
+        m_pClient->SendNotifyMsg( "You already know this skill." );
         return 3;
     }
 
@@ -715,30 +713,28 @@ uint8 Character::InjectSkillIntoBrain(SkillRef skill) {
      *  If so, send error, cancel inject and return. (flagID=61).
      */
 
-    if (!skill->SkillPrereqsComplete(*this)) {
+    if ( !skill->SkillPrereqsComplete( *this ) ) {
         /** @todo need to send back a response to the client.  need packet specs. */
         _log(SKILL__DEBUG, "%s(%u): Requested to inject %s (%u/%u) but prereq not complete.", \
-                name(), m_itemID, skill->name(), skill->typeID(), skill->itemID());
-        m_pClient->SendNotifyMsg("Injection failed.  Skill prerequisites incomplete.");
+                name(), m_itemID, skill->name(), skill->typeID(), skill->itemID() );
+        m_pClient->SendNotifyMsg( "Injection failed.  Skill prerequisites incomplete." );
         return 2;
     }
 
     // are we injecting from a stack of skills?
-    if (skill->quantity() > 1) {
+    if ( skill->quantity() > 1 ) {
         // split the stack to obtain single item
-        skill = SkillRef::StaticCast(skill->Split(1));
+        skill = SkillRef::StaticCast(skill->Split( 1 ));
         if (skill.get() == nullptr ) {
-            _log(ITEM__ERROR, "%s (%u): Unable to split stack of %s (%u).", name(), m_itemID, skill->name(), skill->itemID());
+            _log( ITEM__ERROR, "%s (%u): Unable to split stack of %s (%u).", name(), m_itemID, skill->name(), skill->itemID() );
             return 4;
         }
     }
 
     skill->ChangeSingleton(true);
     skill->Move(m_itemID, flagSkill, true);
-    skill->SetAttribute(AttrSkillPoints, EvilZero);
-    skill->SetAttribute(AttrSkillLevel, EvilZero);
-
-    skill->VerifyAttribs();
+    skill->SetAttribute(AttrSkillPoints, EvilZero.get_uint32());
+    skill->SetAttribute(AttrSkillLevel, EvilZero.get_uint32(), false);
 
     // 'EvESkill::Event::SkillInjected' shows as "Unknown" in PD>Skill>History
     SaveSkillHistory(EvESkill::Event::SkillInjected, GetFileTimeNow(), m_itemID, skill->typeID(), 0, 0);
@@ -764,7 +760,7 @@ void Character::LoadPausedSkillQueue(uint16 typeID)
     if (m_skillQueue.empty())
         return;
 
-    Skill* skill(GetCharSkillRef(typeID).get());
+    Skill* skill(GetSkill(typeID).get());
     if (typeID != m_skillQueue.front().typeID) {
         // skill to start != first skill in queue...do we just start removing skills till we find this typeID?
         _log(SKILL__WARNING, "LoadPausedSkillQueue() - type sent (%u) does not match first in queue (%u)",
@@ -776,7 +772,7 @@ void Character::LoadPausedSkillQueue(uint16 typeID)
     uint32 currentSP(0), nextSP(0);
     int64 startTime(GetFileTimeNow());
     for (SkillQueue::iterator itr = m_skillQueue.begin(); itr != m_skillQueue.end(); ++itr) {
-        skill = GetCharSkillRef(itr->typeID).get();
+        skill = GetSkill(itr->typeID).get();
         if (skill == nullptr)
             continue;
         nextLvl = skill->GetAttribute(AttrSkillLevel).get_uint32() + 1;
@@ -797,7 +793,7 @@ void Character::LoadPausedSkillQueue(uint16 typeID)
     }
 
     // get first skill, add start history and send begin training packet
-    skill = GetCharSkillRef(m_skillQueue.front().typeID).get();
+    skill = GetSkill(m_skillQueue.front().typeID).get();
     skill->SetFlag(flagSkillInTraining, true);
     skill->SaveItem();
 
@@ -907,15 +903,15 @@ void Character::CancelSkillInTraining(bool update/*false*/)
 }
 
 void Character::AddToSkillQueue(uint16 typeID, uint8 level) {
-    Skill* skill(GetCharSkillRef(typeID).get());
+    Skill* skill(GetSkill(typeID).get());
     if (skill == nullptr) {
         //  skill not found.  cancel and return
         _log(SKILL__QUEUE, "Cannot find Skill %u.", typeID);
-        m_pClient->SendErrorMsg("Cannot find skill to train.  Ref: ServerError 60723.");
+        m_pClient->SendErrorMsg("Cannot find skill to train.");
         return;
     }
 
-    _log(SKILL__INFO, "Starting checks to add %s to training queue.", skill->name());
+    _log( SKILL__INFO, "Starting checks to add %s to training queue.", skill->name());
 
     uint8 nextLvl(skill->GetAttribute(AttrSkillLevel).get_uint32() + 1);
     if (nextLvl > EvESkill::MAXSKILLLEVEL)
@@ -1025,7 +1021,7 @@ void Character::SkillQueueLoop(bool update/*true*/)
     Skill* skill(nullptr);
     while (!m_skillQueue.empty()) {
         QueuedSkill qs = m_skillQueue.front();
-        skill = GetCharSkillRef( qs.typeID ).get();
+        skill = GetSkill( qs.typeID ).get();
         if ((qs.typeID == 0) or (skill == nullptr)) {
             _log( SKILL__WARNING, "SkillID %u to train was not found.  Erase and continue.", qs.typeID);
             m_skillQueue.erase( m_skillQueue.begin() );
@@ -1072,7 +1068,7 @@ void Character::SkillQueueLoop(bool update/*true*/)
                     tmp = ost.Encode();
                 } else {
                     // another skill in the works.  send combined update
-                    SkillRef sref = GetCharSkillRef(m_skillQueue.front().typeID);
+                    SkillRef sref = GetSkill(m_skillQueue.front().typeID);
                     if (sref.get() == nullptr) {
                         // that shit didnt work...revert to multiple packets
                         OnSkillTrained ost;
@@ -1105,7 +1101,7 @@ void Character::SkillQueueLoop(bool update/*true*/)
                     default: {
                         if (!sent) {
                             sent = true;
-                            m_pClient->SendInfoModalMsg("Completed Skill Training.<br>Your ship will update to the new skill level the next time you undock.");
+                            m_pClient->SendInfoModalMsg("Completed Skill Training.<br>Your ship will update to the new level the next time you undock.");
                         }
                     } break;
                 }

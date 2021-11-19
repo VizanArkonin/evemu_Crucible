@@ -28,19 +28,21 @@
 
 
 #include "POD_containers.h"
-#include "inventory/AttributeMap.h"
-//#include "inventory/Inventory.h"
-//#include "inventory/InventoryDB.h"
 #include "inventory/ItemDB.h"
+#include "inventory/Inventory.h"
+#include "inventory/InventoryDB.h"
 #include "inventory/ItemType.h"
 #include "inventory/ItemFactory.h"
+#include "inventory/AttributeMap.h"
 
-struct fxData;
-
-class Client;
-class Inventory;
-class ModuleItem;
+class PyRep;
+class PyDict;
+class PyObject;
 class ShipItem;
+class ServiceDB;
+class ModuleItem;
+class ItemContainer;
+class Rsp_CommonGetInfo_Entry;
 
 /*
  * NOTE:
@@ -225,11 +227,11 @@ protected:
         // static load
         RefPtr<_Ty> i = _Ty::template _Load<_Ty>( itemID );
         if (!i)
-            return RefPtr<_Ty>(nullptr);
+            return RefPtr<_Ty>();
 
         // virtual load (load attributes)
         if (!i->_Load())
-            return RefPtr<_Ty>(nullptr);
+            return RefPtr<_Ty>();
 
         return i;
     }
@@ -240,13 +242,13 @@ protected:
     {
         // pull the specific item info from db
         ItemData data;
-        if (!ItemDB::GetItemData(itemID, data))
-            return RefPtr<_Ty>(nullptr);
+        if (!ItemDB::GetItem(itemID, data))
+            return RefPtr<_Ty>();
 
         // obtain type
         const ItemType *type = sItemFactory.GetType( data.typeID );
-        if ( type == nullptr )
-            return RefPtr<_Ty>(nullptr);
+        if( type == nullptr )
+            return RefPtr<_Ty>();
 
         return _Ty::template _LoadItem<_Ty>( itemID, *type, data );
     }

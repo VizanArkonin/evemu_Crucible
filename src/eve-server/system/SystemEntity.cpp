@@ -49,7 +49,7 @@
 
 
 SystemEntity::SystemEntity(InventoryItemRef self, PyServiceMgr &services, SystemManager* system)
-: m_self(self),
+:m_self(self),
 m_services(services),
 m_system(system),
 m_bubble(nullptr),
@@ -72,17 +72,6 @@ m_killed(false)
 
     _log(SE__DEBUG, "Created SE for item %s (%u) with radius of %.1f.", self->name(), self->itemID(), m_radius);
 }
-
-// copy c'tor
-SystemEntity::SystemEntity(const SystemEntity* oth) : m_self(oth->m_self),m_services(oth->m_services),m_system(oth->m_system),
-m_bubble(oth->m_bubble),m_destiny(oth->m_destiny),m_targMgr(oth->m_targMgr),m_killed(oth->m_killed),m_warID(oth->m_warID),
-m_allyID(oth->m_allyID),m_corpID(oth->m_corpID),m_fleetID(oth->m_fleetID),m_ownerID(oth->m_ownerID),m_radius(oth->m_radius),
-m_harmonic(oth->m_harmonic)
-{
-    sLog.Error("SE::SE()", "copy c'tor.");
-    // wip
-}
-
 
 void SystemEntity::Process() {
     if (m_killed) {
@@ -143,7 +132,7 @@ void SystemEntity::EncodeDestiny( Buffer& into )
     _log(SE__DESTINY, "SE::EncodeDestiny(): %s - id:%li, mode:%u, flags:0x%X", GetName(), head.entityID, head.mode, head.flags);
 }
 
-void SystemEntity::Killed(Damage& damage)
+void SystemEntity::Killed(Damage& fatal_blow)
 {
     if (m_targMgr != nullptr) {
         // loop thru list of all modules targeting this entity and let them know it has been killed.
@@ -160,7 +149,6 @@ void SystemEntity::Delete()
         m_targMgr->ClearFromTargets(); //OnTarget(nullptr, TargMgr::Mode::Clear, TargMgr::Msg::Deleted);
     if (m_system != nullptr)
         m_system->RemoveEntity(this);
-    // containers have additional calls to process and calls this.  calling here will create infinite loop
     if (!IsContainerSE())
         m_self->Delete();
 }
@@ -186,33 +174,30 @@ void SystemEntity::SendDamageStateChanged() {  //working 24Apr15
         m_targMgr->QueueUpdate(&up);
     PySafeDecRef(up);
     _log(DAMAGE__MESSAGE, "%s(%u): DamageUpdate - S:%f A:%f H:%f.", \
-            m_self->name(), m_self->itemID(), dmgState.shield, dmgState.armor, dmgState.structure);
+            GetName(), m_self->itemID(), dmgState.shield, dmgState.armor, dmgState.structure);
 }
 
 void SystemEntity::DropLoot(WreckContainerRef wreckRef, uint32 groupID, uint32 owner) {
     /*   allan 27Nov14    */
     std::vector<LootList> lootList;
     sDataMgr.GetLoot(groupID, lootList);
-    if (lootList.empty()) {
-        _log(LOOT__INFO, "lootList empty for %s(%u)", m_self->name(), m_self->itemID());
+    if (lootList.empty())
         return;
-    }
 
     uint32 quantity(0);
-    std::vector<LootList>::iterator itr = lootList.begin();
-    while (itr != lootList.end()) {
-        if (itr->minDrop == itr->maxDrop) {
-            quantity = itr->minDrop;
+    std::vector<LootList>::iterator cur = lootList.begin();
+    while (cur != lootList.end()) {
+        if (cur->minDrop == cur->maxDrop) {
+            quantity = cur->minDrop;
         } else {
-            quantity = (uint32)(MakeRandomInt(itr->minDrop, itr->maxDrop));
+            quantity = (uint32)(MakeRandomInt(cur->minDrop, cur->maxDrop));
         }
-        if (quantity == 0)
+        if (quantity < 1)
             quantity = 1;
 
-        ItemData iLoot(itr->itemID, owner, wreckRef->itemID(), flagNone, quantity);
+        ItemData iLoot(cur->itemID, owner, wreckRef->itemID(), flagNone, quantity);
         wreckRef->AddItem(sItemFactory.SpawnItem(iLoot));
-        _log(LOOT__INFO, "added %u of %u to list for %s(%u)", quantity, itr->itemID, m_self->name(), m_self->itemID());
-        ++itr;
+        ++cur;
     }
 }
 
@@ -275,14 +260,6 @@ StaticSystemEntity::StaticSystemEntity(InventoryItemRef self, PyServiceMgr &serv
 {
 }
 
-// copy c'tor
-StaticSystemEntity::StaticSystemEntity(const StaticSystemEntity* oth)
-: SystemEntity(oth->m_self, oth->m_services, oth->m_system)
-{
-    sLog.Error("SSE::SSE()", "copy c'tor.");
-    // wip
-}
-
 bool StaticSystemEntity::LoadExtras() {
     return true;
 }
@@ -320,14 +297,6 @@ BeltSE::BeltSE(InventoryItemRef self, PyServiceMgr &services, SystemManager* sys
 {
 }
 
-// copy c'tor
-BeltSE::BeltSE(const BeltSE* oth)
-: StaticSystemEntity(oth->m_self, oth->m_services, oth->m_system)
-{
-    sLog.Error("SSE::BeltSE()", "copy c'tor.");
-    // wip
-}
-
 bool BeltSE::LoadExtras() {
     if (!StaticSystemEntity::LoadExtras())
         return false;
@@ -344,14 +313,6 @@ StargateSE::StargateSE(InventoryItemRef self, PyServiceMgr &services, SystemMana
 : StaticSystemEntity(self, services, system),
 m_sbuSE(nullptr)
 {
-}
-
-// copy c'tor
-StargateSE::StargateSE(const StargateSE* oth)
-: StaticSystemEntity(oth->m_self, oth->m_services, oth->m_system)
-{
-    sLog.Error("SSE::gateSE()", "copy c'tor.");
-    // wip
 }
 
 bool StargateSE::LoadExtras() {
@@ -394,17 +355,9 @@ PyDict* StargateSE::MakeSlimItem() {
 
 /* Non-Static / Non-Mobile / Non-Destructable / Celestial Objects - Containers, DeadSpace, ForceFields, ScanProbes */
 ItemSystemEntity::ItemSystemEntity(InventoryItemRef self, PyServiceMgr &services, SystemManager* system)
-: SystemEntity(self, services, system),
-m_keyType(0)
+: SystemEntity(self, services, system)
 {
-}
-
-// copy c'tor
-ItemSystemEntity::ItemSystemEntity(const ItemSystemEntity* oth)
-: SystemEntity(oth->m_self, oth->m_services, oth->m_system)
-{
-    sLog.Error("ISE::ISE()", "copy c'tor.");
-    // wip
+    m_keyType = 0;
 }
 
 PyDict* ItemSystemEntity::MakeSlimItem() {
@@ -497,14 +450,6 @@ FieldSE::FieldSE(InventoryItemRef self, PyServiceMgr &services, SystemManager *s
     m_ownerID = data.ownerID;
 }
 
-// copy c'tor
-FieldSE::FieldSE(const FieldSE* oth)
-: ItemSystemEntity(oth->m_self, oth->m_services, oth->m_system)
-{
-    sLog.Error("ISE::FieldSE()", "copy c'tor.");
-    // wip
-}
-
 void FieldSE::EncodeDestiny( Buffer& into )
 {
     using namespace Destiny;
@@ -553,14 +498,6 @@ m_invul(false)
 
     assert(m_targMgr != nullptr);
     assert(m_destiny != nullptr);
-}
-
-// copy c'tor
-ObjectSystemEntity::ObjectSystemEntity(const ObjectSystemEntity* oth)
-: SystemEntity(oth->m_self, oth->m_services, oth->m_system)
-{
-    sLog.Error("OSE::OSE()", "copy c'tor.");
-    // wip
 }
 
 ObjectSystemEntity::~ObjectSystemEntity()
@@ -620,7 +557,6 @@ void ObjectSystemEntity::MakeDamageState(DoDestinyDamageState &into) {
 
 void ObjectSystemEntity::UpdateDamage()
 {
-    /** @todo (Allan) needs more work */
     SystemEntity::UpdateDamage();
      DamageDetails dmgState;
         dmgState.shield = m_self->GetAttribute(AttrShieldCharge).get_double() / m_self->GetAttribute(AttrShieldCapacity).get_double();
@@ -633,10 +569,9 @@ void ObjectSystemEntity::UpdateDamage()
         dmgChange.state = dmgState.Encode();
     PyTuple *up = dmgChange.Encode();
     //source->QueueDestinyUpdate(&up);
-    PySafeDecRef(up);
 }
 
-void ObjectSystemEntity::Killed(Damage& damage)
+void ObjectSystemEntity::Killed(Damage &fatal_blow)
 {
     // do we need to make wreck items here?
     // do these structures have loot?  probably so eventually
@@ -659,14 +594,6 @@ DeployableSE::DeployableSE(InventoryItemRef self, PyServiceMgr &services, System
     m_ownerID = data.ownerID;
 }
 
-// copy c'tor
-DeployableSE::DeployableSE(const DeployableSE* oth)
-: ObjectSystemEntity(oth->m_self, oth->m_services, oth->m_system)
-{
-    sLog.Error("OSE::DeployableSE()", "copy c'tor.");
-    // wip
-}
-
 
 /* Non-Static / Mobile / Destructible / Celestial Objects - PC's, NPC's, Drones, Ships, Missiles, Wrecks  */
 DynamicSystemEntity::DynamicSystemEntity(InventoryItemRef self, PyServiceMgr &services, SystemManager* system)
@@ -679,14 +606,6 @@ m_frozen(false)
 
     assert(m_targMgr != nullptr);
     assert(m_destiny != nullptr);
-}
-
-// copy c'tor
-DynamicSystemEntity::DynamicSystemEntity(const DynamicSystemEntity* oth)
-: SystemEntity(oth->m_self, oth->m_services, oth->m_system)
-{
-    sLog.Error("DSE::DSE()", "copy c'tor.");
-    // wip
 }
 
 DynamicSystemEntity::~DynamicSystemEntity()
@@ -777,7 +696,6 @@ void DynamicSystemEntity::UpdateDamage()
         dmgChange.state = dmgState.Encode();
     PyTuple *up = dmgChange.Encode();
     //source->QueueDestinyUpdate(&up);
-    PySafeDecRef(up);
 }
 
 void DynamicSystemEntity::AwardBounty(Client* pClient)

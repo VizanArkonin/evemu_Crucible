@@ -67,7 +67,7 @@ PyResult CorpBookmarkMgr::Handle_GetBookmarks(PyCallArgs& call)
 {
     /*
     ObjectCachedMethodID method_id(GetName(), "GetBookmarks");
-    if (!m_manager->cache_service->IsCacheLoaded(method_id)) {
+    if(!m_manager->cache_service->IsCacheLoaded(method_id)) {
         PyTuple *tuple = new PyTuple(2);
             tuple->SetItem(0, m_db.GetBookmarks(call.client->GetCorporationID()));
             tuple->SetItem(1, m_db.GetFolders(call.client->GetCorporationID()));
@@ -93,7 +93,7 @@ PyResult CorpBookmarkMgr::Handle_UpdateBookmark(PyCallArgs& call) {
         return nullptr;
     }
 
-    m_db.UpdateBookmark(args);
+    m_db.UpdateBookmark(args.bookmarkID, call.client->GetCorporationID(), PyRep::StringContent(args.memo), PyRep::StringContent(args.comment), args.folderID);
 
     return PyStatic.NewNone();
 }
@@ -106,7 +106,7 @@ PyResult CorpBookmarkMgr::Handle_UpdatePlayerBookmark(PyCallArgs& call) {
         return nullptr;
     }
 
-    m_db.UpdateBookmark(args);
+    m_db.UpdateBookmark(args.bookmarkID, call.client->GetCorporationID(), PyRep::StringContent(args.memo), PyRep::StringContent(args.comment), args.folderID);
 
     return PyStatic.NewNone();
 }
@@ -131,7 +131,7 @@ PyResult CorpBookmarkMgr::Handle_MoveBookmarksToFolder(PyCallArgs& call)
     for (size_t i = 0; i < bmList->size(); ++i)
         bmIDs.push_back(bmList->GetItem(i)->AsInt()->value());
 
-    m_db.MoveBookmarkToFolder(args.folderID, bmIDs);
+    m_db.MoveBookmarkToFolder(args.folderID, &bmIDs);
 
     return m_db.GetBookmarksInFolder(args.folderID);
 }
@@ -163,7 +163,7 @@ PyResult CorpBookmarkMgr::Handle_CreateFolder(PyCallArgs& call)
     uint32 ownerID = call.client->GetCorporationID();
     Rsp_CreateFolder result;
         result.ownerID = ownerID;
-        result.folderID = m_db.SaveNewFolder(name, ownerID, call.client->GetCharacterID());
+        result.folderID = m_db.SaveNewFolder(name, ownerID);
         result.folderName = name;
         result.creatorID = call.client->GetCharacterID();
 

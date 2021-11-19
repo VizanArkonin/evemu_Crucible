@@ -34,36 +34,29 @@
 PyRep* BookmarkDB::GetBookmarksInFolder(uint32 folderID)
 {
     DBQueryResult res;
-    if (folderID) {
-        if (!sDatabase.RunQuery(res,
-            "SELECT"
-            "  bookmarkID"
-            " FROM bookmarks"
-            " WHERE folderID = %u",
-            folderID))
-        {
-            sLog.Error( "BmDB::GetBookmarksInFolder()", "Failed to query bookmarks for folderID %u: %s.", folderID, res.error.c_str() );
-            return nullptr;
-        }
-    } else {
-        // not sure if folderID will ever be zero, but just in case...
-        if (!sDatabase.RunQuery(res,
-            "SELECT"
-            "  bookmarkID"
-            " FROM bookmarks"
-            " WHERE folderID IS NULL"))
-        {
-            sLog.Error( "BmDB::GetBookmarksInFolder()", "Failed to query bookmarks for folderID 0: %s.", res.error.c_str() );
-            return nullptr;
-        }
+    if (!sDatabase.RunQuery(res,
+        "SELECT"
+        "  bookmarkID,"
+        "  folderID"
+        " FROM bookmarks"
+        " WHERE folderID = %u",
+        folderID))
+    {
+        sLog.Error( "BookmarkDB::GetBMData()", "Failed to query bookmarks for folderID %u: %s.", folderID, res.error.c_str() );
+        return nullptr;
     }
 
+    //return DBResultToCRowset(res);
     PyList* list = new PyList();
     DBResultRow row;
     while (res.GetRow(row)) {
         PyDict* dict = new PyDict();
         dict->SetItemString("bookmarkID", new PyInt(row.GetInt(0)));
-        dict->SetItemString("folderID", ((folderID == 0) ? PyStatic.NewNone() : new PyInt(folderID)));
+        if (row.IsNull(1) or (row.GetInt(1) == 0)) {
+            dict->SetItemString("folderID", PyStatic.NewNone());
+        } else {
+            dict->SetItemString("folderID", new PyInt(row.GetInt(1)));
+        }
         list->AddItem(new PyObject("util.KeyVal", dict));
     }
 
@@ -73,8 +66,8 @@ PyRep* BookmarkDB::GetBookmarksInFolder(uint32 folderID)
 void BookmarkDB::GetBookmarkByFolderID(int32 folderID, std::vector< int32 >& bmIDs)
 {
     DBQueryResult res;
-    if (!sDatabase.RunQuery(res, "SELECT bookmarkID FROM bookmarks WHERE folderID = %i", folderID)) {
-        sLog.Error( "BmDB::GetBookmarkByFolderID()", "Failed to query bookmarks for folderID %i: %s.", folderID, res.error.c_str() );
+    if (!sDatabase.RunQuery(res, "SELECT bookmarkID FROM bookmarks WHERE folderID = %u", folderID)) {
+        sLog.Error( "BookmarkDB::GetBookmarkByFolderID()", "Failed to query bookmarks for folderID %u: %s.", folderID, res.error.c_str() );
         return;
     }
 
@@ -102,14 +95,14 @@ PyRep *BookmarkDB::GetBookmarks(uint32 ownerID) {
         " WHERE ownerID = %u",
         ownerID))
     {
-        sLog.Error( "BmDB::GetBookmarks()", "Failed to query bookmarks for owner %u: %s.", ownerID, res.error.c_str() );
+        sLog.Error( "BookmarkDB::GetBookmarks()", "Failed to query bookmarks for owner %u: %s.", ownerID, res.error.c_str() );
         return nullptr;
     }
 
-    DBResultRow row;
     // Corp bookmarks are read differently and should be as a dict of bookmarks with the key being bookmarkID
     if (IsCorp(ownerID)) {
         PyDict* corpBookmarks = new PyDict();
+        DBResultRow row;
         while (res.GetRow(row)) {
             PyDict* dict = new PyDict();
             dict->SetItemString("bookmarkID", new PyInt(row.GetInt(0)));
@@ -122,7 +115,11 @@ PyRep *BookmarkDB::GetBookmarks(uint32 ownerID) {
             dict->SetItemString("y", new PyFloat(row.GetFloat(7)));
             dict->SetItemString("z", new PyFloat(row.GetFloat(8)));
             dict->SetItemString("locationID", new PyInt(row.GetInt(9)));
-            dict->SetItemString("note", new PyString(row.GetText(10)));
+            if (row.IsNull(10)) {
+                dict->SetItemString("note", PyStatic.NewNone());
+            } else {
+                dict->SetItemString("note", new PyInt(row.GetInt(10)));
+            }
             dict->SetItemString("creatorID", new PyInt(row.GetInt(11)));
             if (row.IsNull(12) or (row.GetInt(12) == 0)) {
                 dict->SetItemString("folderID", PyStatic.NewNone());
@@ -134,7 +131,9 @@ PyRep *BookmarkDB::GetBookmarks(uint32 ownerID) {
         return corpBookmarks;
     }
 
+    //return DBResultToCRowset(res);
     PyList* list = new PyList();
+    DBResultRow row;
     while (res.GetRow(row)) {
         PyDict* dict = new PyDict();
         dict->SetItemString("bookmarkID", new PyInt(row.GetInt(0)));
@@ -147,7 +146,11 @@ PyRep *BookmarkDB::GetBookmarks(uint32 ownerID) {
         dict->SetItemString("y", new PyFloat(row.GetFloat(7)));
         dict->SetItemString("z", new PyFloat(row.GetFloat(8)));
         dict->SetItemString("locationID", new PyInt(row.GetInt(9)));
-        dict->SetItemString("note", new PyString(row.GetText(10)));
+        if (row.IsNull(10)) {
+            dict->SetItemString("note", PyStatic.NewNone());
+        } else {
+            dict->SetItemString("note", new PyInt(row.GetInt(10)));
+        }
         dict->SetItemString("creatorID", new PyInt(row.GetInt(11)));
         if (row.IsNull(12) or (row.GetInt(12) == 0)) {
             dict->SetItemString("folderID", PyStatic.NewNone());
@@ -172,7 +175,7 @@ PyRep *BookmarkDB::GetFolders(uint32 ownerID) {
         " WHERE ownerID = %u",
         ownerID))
     {
-        sLog.Error( "BmDB::GetFolders()", "Failed to query bookmarks for owner %u: %s.", ownerID, res.error.c_str() );
+        sLog.Error( "BookmarkDB::GetFolders()", "Failed to query bookmarks for owner %u: %s.", ownerID, res.error.c_str() );
         return nullptr;
     }
 
@@ -195,7 +198,7 @@ const char* BookmarkDB::GetBookmarkName(uint32 bookmarkID)
 {
     DBQueryResult res;
     if (!sDatabase.RunQuery(res, "SELECT memo FROM bookmarks WHERE bookmarkID = %u", bookmarkID)) {
-        sLog.Error( "BmDB::GetBookmarkName()", "Failed to query bookmarkID %u: %s.", bookmarkID, res.error.c_str() );
+        sLog.Error( "BookmarkDB::GetBookmarkName()", "Failed to query bookmarkID %u: %s.", bookmarkID, res.error.c_str() );
         return nullptr;
     }
 
@@ -210,7 +213,7 @@ PyTuple* BookmarkDB::GetBookmarkDescription(uint32 bookmarkID)
 {
     DBQueryResult res;
     if (!sDatabase.RunQuery(res, "SELECT memo, note FROM bookmarks WHERE bookmarkID = %u", bookmarkID)) {
-        sLog.Error( "BmDB::GetBookmarkName()", "Failed to query bookmarkID %u: %s.", bookmarkID, res.error.c_str() );
+        sLog.Error( "BookmarkDB::GetBookmarkName()", "Failed to query bookmarkID %u: %s.", bookmarkID, res.error.c_str() );
         return nullptr;
     }
 
@@ -218,9 +221,12 @@ PyTuple* BookmarkDB::GetBookmarkDescription(uint32 bookmarkID)
     DBResultRow row;
     if (res.GetRow(row)) {
         tuple->SetItem(0, new PyString(row.GetText(0)));
-        tuple->SetItem(1, new PyString(row.GetText(1)));
+        if (row.IsNull(1)) {
+            tuple->SetItem(1, PyStatic.NewNone());
+        } else {
+            tuple->SetItem(1, new PyString(row.GetText(1)));
+        }
     } else {
-        // this should be empty string, not none
         tuple->SetItem(0, PyStatic.NewNone());
         tuple->SetItem(1, PyStatic.NewNone());
     }
@@ -240,7 +246,7 @@ bool BookmarkDB::GetBookmarkInformation(uint32 bookmarkID, uint32& itemID, uint1
         " FROM bookmarks "
         " WHERE bookmarkID = %u ", bookmarkID))
     {
-        sLog.Error( "BmDB::GetBookmarkInformation()", "Error in query: %s", res.error.c_str() );
+        sLog.Error( "BookmarkDB::GetBookmarkInformation()", "Error in query: %s", res.error.c_str() );
         return false;
     }
 
@@ -262,13 +268,8 @@ bool BookmarkDB::GetBookmarkInformation(uint32 bookmarkID, uint32& itemID, uint1
 void BookmarkDB::SaveNewBookmark( BmData& data )
 {
     std::string eMemo, eNote;
-    eMemo.clear();
-    eNote.clear();
-    if (!data.memo.empty())
-        sDatabase.DoEscapeString(eMemo, data.memo.c_str());
-
-    if (!data.note.empty())
-        sDatabase.DoEscapeString(eNote, data.note.c_str());
+    sDatabase.DoEscapeString(eMemo, data.memo.c_str());
+    sDatabase.DoEscapeString(eNote, data.note.c_str());
 
     DBerror err;
     if (data.folderID > 0) {
@@ -279,7 +280,7 @@ void BookmarkDB::SaveNewBookmark( BmData& data )
             data.ownerID, data.itemID, data.typeID, eMemo.c_str(), GetFileTimeNow(), data.point.x, data.point.y,
             data.point.z, data.locationID, eNote.c_str(), data.creatorID, data.folderID ))
         {
-            sLog.Error( "BmDB::SaveNewBookmarkToDatabase(1)", "Error in query, Bookmark content couldn't be saved: %s", err.c_str() );
+            sLog.Error( "BookmarkDB::SaveNewBookmarkToDatabase(1)", "Error in query, Bookmark content couldn't be saved: %s", err.c_str() );
         }
     } else {
         if (!sDatabase.RunQueryLID(err, data.bookmarkID,
@@ -289,7 +290,7 @@ void BookmarkDB::SaveNewBookmark( BmData& data )
             data.ownerID, data.itemID, data.typeID, eMemo.c_str(), GetFileTimeNow(), data.point.x, data.point.y,
             data.point.z, data.locationID, eNote.c_str(), data.creatorID ))
         {
-            sLog.Error( "BmDB::SaveNewBookmarkToDatabase(2)", "Error in query, Bookmark content couldn't be saved: %s", err.c_str() );
+            sLog.Error( "BookmarkDB::SaveNewBookmarkToDatabase(2)", "Error in query, Bookmark content couldn't be saved: %s", err.c_str() );
         }
     }
 }
@@ -301,7 +302,7 @@ bool BookmarkDB::DeleteBookmark(uint32 ownerID, uint32 bookmarkID)
         "DELETE FROM bookmarks"
         " WHERE ownerID = %u AND bookmarkID = %u", ownerID, bookmarkID))
     {
-        sLog.Error( "BmDB::DeleteBookmarkFromDatabase()", "Error in query: %s", err.c_str() );
+        sLog.Error( "BookmarkDB::DeleteBookmarkFromDatabase()", "Error in query: %s", err.c_str() );
         return false;
     }
 
@@ -322,7 +323,7 @@ bool BookmarkDB::DeleteBookmarks(std::vector<int32>* bookmarkList)
 
     DBerror err;
     if (!sDatabase.RunQuery(err, "DELETE FROM bookmarks WHERE bookmarkID IN (%s)", st.str().c_str())) {
-        sLog.Error( "BmDB::DeleteBookmarksFromDatabase()", "Error in query: %s", err.c_str() );
+        sLog.Error( "BookmarkDB::DeleteBookmarksFromDatabase()", "Error in query: %s", err.c_str() );
         return false;
     }
 
@@ -335,40 +336,33 @@ void BookmarkDB::ChangeOwner(uint32 bookmarkID, uint32 ownerID/*1*/) {
 }
 
 
-bool BookmarkDB::UpdateBookmark(Call_UpdateBookmark& args)
+bool BookmarkDB::UpdateBookmark(uint32 bookmarkID, uint32 ownerID, std::string memo, std::string note, uint32 folderID/*0*/)
 {
-    std::string eMemo, eNote;
-    eMemo.clear();
-    eNote.clear();
-    if (!PyRep::StringContent(args.memo).empty())
-        sDatabase.DoEscapeString(eMemo, PyRep::StringContent(args.memo));
-
-    if (!PyRep::StringContent(args.comment).empty())
-        sDatabase.DoEscapeString(eNote, PyRep::StringContent(args.comment));
+    std::string memo_fixed = "";
+    sDatabase.DoEscapeString(memo_fixed, memo.c_str());
 
     DBerror err;
-    if (!sDatabase.RunQuery(err, "UPDATE bookmarks SET memo = '%s', note = '%s', folderID = %i, ownerID = %i WHERE bookmarkID = %i",
-        eMemo.c_str(), eNote.c_str(), args.folderID, args.ownerID, args.bookmarkID))
+    if (!sDatabase.RunQuery(err, "UPDATE bookmarks SET memo = '%s', note = '%s', folderID = %u WHERE bookmarkID = %u AND ownerID = %u",
+        memo_fixed.c_str(), note.c_str(), folderID, bookmarkID, ownerID))
     {
-        sLog.Error( "BmDB::UpdateBookmarkInDatabase()", "Error in query: %s", err.c_str() );
+        sLog.Error( "BookmarkDB::UpdateBookmarkInDatabase()", "Error in query: %s", err.c_str() );
         return false;
     }
 
     return true;
 }
 
-uint32 BookmarkDB::SaveNewFolder(std::string folderName, uint32 ownerID, uint32 creatorID)
+uint32 BookmarkDB::SaveNewFolder(std::string folderName, uint32 ownerID)
 {
     uint32 folderID(0);
     std::string eName = "";
     sDatabase.DoEscapeString( eName, folderName.c_str());
 
     DBerror err;
-    if (!sDatabase.RunQueryLID(err, folderID, "INSERT INTO bookmarkFolders (folderName, ownerID, creatorID)"
-        " VALUES ('%s', %u, %u) ",
-            eName.c_str(), ownerID, creatorID ))
+    if (!sDatabase.RunQueryLID(err, folderID, "INSERT INTO bookmarkFolders (folderName, ownerID, creatorID) VALUES ('%s', %u, %u) ",
+                            eName.c_str(), ownerID, ownerID ))
     {
-        sLog.Error( "BmDB::SaveNewFolderToDatabase()", "Error in query, Folder couldn't be saved: %s", err.c_str() );
+        sLog.Error( "BookmarkDB::SaveNewFolderToDatabase()", "Error in query, Folder couldn't be saved: %s", err.c_str() );
         return 0;
     }
 
@@ -381,10 +375,10 @@ bool BookmarkDB::UpdateFolder(int32 folderID, std::string folderName)
     sDatabase.DoEscapeString( eName, folderName.c_str());
 
     DBerror err;
-    if (!sDatabase.RunQuery(err, "UPDATE bookmarkFolders SET folderName = '%s' WHERE folderID = %i",
+    if (!sDatabase.RunQuery(err, "UPDATE bookmarkFolders SET folderName = '%s' WHERE folderID = %u",
                                eName.c_str(), folderID))
     {
-        sLog.Error( "BmDB::UpdateFolder()", "Error in query, Folder couldn't be saved: %s", err.c_str() );
+        sLog.Error( "BookmarkDB::UpdateFolder()", "Error in query, Folder couldn't be saved: %s", err.c_str() );
         return false;
     }
 
@@ -394,22 +388,22 @@ bool BookmarkDB::UpdateFolder(int32 folderID, std::string folderName)
 bool BookmarkDB::DeleteFolder(int32 folderID)
 {
     DBerror err;
-    if (!sDatabase.RunQuery(err, "DELETE FROM bookmarkFolders WHERE folderID = %i", folderID))
-        sLog.Error( "BmDB::DeleteFolder(1)", "Error in query: %s", err.c_str() );
+    if (!sDatabase.RunQuery(err, "DELETE FROM bookmarkFolders WHERE folderID = %u", folderID))
+        sLog.Error( "BookmarkDB::DeleteFolder(1)", "Error in query: %s", err.c_str() );
 
     // these bms may have copies....cannot delete yet
-    if (!sDatabase.RunQuery(err, "UPDATE bookmarks SET ownerID = 1 WHERE folderID = %i", folderID))
-        sLog.Error( "BmDB::DeleteFolder(2)", "Error in query: %s", err.c_str() );
+    if (!sDatabase.RunQuery(err, "UPDATE bookmarks SET ownerID = 1 WHERE folderID = %u", folderID))
+        sLog.Error( "BookmarkDB::DeleteFolder(2)", "Error in query: %s", err.c_str() );
 
     return true;
 }
 
-void BookmarkDB::MoveBookmarkToFolder(int32 folderID, std::vector<int32>& bookmarkList)
+void BookmarkDB::MoveBookmarkToFolder(int32 folderID, std::vector<int32>* bookmarkList)
 {
     std::stringstream st;
-    std::size_t size = bookmarkList.size();
+    std::size_t size = bookmarkList->size();
     for (int8 i=0; i<size; ++i) {
-        st << bookmarkList[i];
+        st << bookmarkList->at(i);
         if (i < (size-1))
             st << ", ";
     }
@@ -419,13 +413,14 @@ void BookmarkDB::MoveBookmarkToFolder(int32 folderID, std::vector<int32>& bookma
 }
 
 void BookmarkDB::GetVoucherData( BmData& data ) {
+
     DBQueryResult res;
     if (!sDatabase.RunQuery(res,
         "SELECT ownerID, itemID, typeID, memo, created, x, y, z, "
         "locationID, note, creatorID, folderID "
         "FROM bookmarks WHERE bookmarkID = %u", data.bookmarkID))
     {
-        sLog.Error( "BmDB::GetVoucherData()", "Failed to query data for Bookmark %u: %s.", data.bookmarkID, res.error.c_str() );
+        sLog.Error( "BookmarkDB::GetVoucherData()", "Failed to query data for Bookmark %u: %s.", data.bookmarkID, res.error.c_str() );
         return;
     }
 
@@ -441,12 +436,16 @@ void BookmarkDB::GetVoucherData( BmData& data ) {
         data.point.y = row.GetFloat(6);
         data.point.z = row.GetFloat(7);
         data.locationID = row.GetUInt(8);
-        data.note = row.GetText(9);
+        if (row.IsNull(9)) {
+            data.note = "";
+        } else {
+            data.note = row.GetText(9);
+        }
         data.creatorID = row.GetUInt(10);
         if (row.IsNull(11)){
             data.folderID = 0;
         } else {
-            data.folderID = row.GetInt(11);
+            data.folderID = row.GetUInt(11);
         }
     }
 }
